@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { ArrowRight, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useCartStore } from "../store/cartStore";
 import { formatPrice } from "../utils/formatPrice";
 import { CartItem } from "./CartItem";
@@ -87,14 +88,14 @@ export function CartDrawer() {
                 <span className="text-muted">Subtotal</span>
                 <span className="font-semibold text-ink">{formatPrice(subtotal)}</span>
               </div>
-              <p className="mt-2 text-xs leading-5 text-muted">Delivery is calculated when checkout is available.</p>
-              <button
-                className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 bg-accent px-5 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                disabled
-                type="button"
+              <p className="mt-2 text-xs leading-5 text-muted">Delivery options and fees are confirmed during checkout.</p>
+              <Link
+                className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                onClick={closeCart}
+                to="/checkout"
               >
                 Checkout <ArrowRight aria-hidden="true" size={17} />
-              </button>
+              </Link>
             </div>
           </>
         )}

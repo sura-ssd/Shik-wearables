@@ -16,6 +16,7 @@ import { useInitialLoad } from "./hooks/useInitialLoad";
 import { Navigate, Route, Routes } from "react-router-dom";
 // import { ScrollManager } from "./components/ScrollManager";
 import { ProductPage } from "./pages/ProductPage";
+import { CheckoutPage } from "./pages/CheckoutPage";
 
 export default function App() {
   const [category, setCategory] = useState<CategoryFilter>("All");
@@ -139,6 +140,7 @@ export default function App() {
             path="/"
           />
           <Route element={<ProductPage />} path="/product/:id" />
+          <Route element={<CheckoutPage />} path="/checkout" />
           <Route element={<Navigate replace to="/" />} path="*" />
         </Routes>
       </main>

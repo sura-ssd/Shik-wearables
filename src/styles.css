@@ -12,6 +12,7 @@
   --color-border: 217 220 216;
   --color-accent: 42 69 255;
   --color-accent-ink: 255 255 255;
+  --color-danger: 180 35 24;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +24,7 @@
     --color-border: 42 46 54;
     --color-accent: 123 141 255;
     --color-accent-ink: 16 18 22;
+    --color-danger: 255 137 123;
   }
 }
 
@@ -34,6 +36,7 @@
   --color-border: 42 46 54;
   --color-accent: 123 141 255;
   --color-accent-ink: 16 18 22;
+  --color-danger: 255 137 123;
 }
 
 :root[data-theme="light"] {
@@ -44,6 +47,7 @@
   --color-border: 217 220 216;
   --color-accent: 42 69 255;
   --color-accent-ink: 255 255 255;
+  --color-danger: 180 35 24;
 }
 
 @layer base {
