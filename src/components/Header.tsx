@@ -23,10 +23,38 @@ export function Header({ isDark, onThemeToggle }: HeaderProps) {
         >
           shik<span className="text-accent">.</span>
         </Link>
-        <nav aria-label="Main navigation" className="hidden items-center gap-8 text-sm font-semibold text-muted sm:flex">
-          <a className="transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent" href="#shop">Shop all</a>
-          <a className="transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent" href="#shop" onClick={() => window.dispatchEvent(new CustomEvent("shik:category", { detail: "Sneakers" }))}>Sneakers</a>
-          <a className="transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent" href="#shop" onClick={() => window.dispatchEvent(new CustomEvent("shik:category", { detail: "Tops" }))}>Clothing</a>
+        <nav
+          aria-label="Main navigation"
+          className="hidden items-center gap-8 text-sm font-semibold text-muted sm:flex"
+        >
+          <Link
+            className="transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            to="/#shop"
+          >
+            Shop all
+          </Link>
+          <Link
+            className="transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent("shik:category", { detail: "Sneakers" }),
+              )
+            }
+            to="/#shop"
+          >
+            Sneakers
+          </Link>
+          <Link
+            className="transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent("shik:category", { detail: "Tops" }),
+              )
+            }
+            to="/#shop"
+          >
+            Clothing
+          </Link>
         </nav>
         <div className="flex items-center gap-2">
           <button
@@ -35,7 +63,11 @@ export function Header({ isDark, onThemeToggle }: HeaderProps) {
             onClick={onThemeToggle}
             type="button"
           >
-            {isDark ? <Sun aria-hidden="true" size={19} /> : <Moon aria-hidden="true" size={19} />}
+            {isDark ? (
+              <Sun aria-hidden="true" size={19} />
+            ) : (
+              <Moon aria-hidden="true" size={19} />
+            )}
           </button>
           <button
             aria-label={`Open cart, ${itemCount} ${itemCount === 1 ? "item" : "items"}`}

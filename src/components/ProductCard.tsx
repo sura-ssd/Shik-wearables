@@ -5,6 +5,7 @@ import type { Product } from "../types";
 import { formatPrice } from "../utils/formatPrice";
 import { SizePicker } from "./SizePicker";
 import { SmoothImage } from "./SmoothImage";
+import { Link } from "react-router-dom";
 
 interface ProductCardProps {
   product: Product;
@@ -22,7 +23,12 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <article className="group min-w-0">
-      <div className="relative aspect-[4/4.5] overflow-hidden rounded-[20px] bg-surface">
+      <Link
+        aria-hidden="true"
+        className="relative block aspect-[4/4.5] overflow-hidden rounded-[20px] bg-surface"
+        tabIndex={-1}
+        to={`/product/${product.id}`}
+      >
         <SmoothImage
           alt={product.imageAlt}
           className="size-full object-cover group-hover:scale-[1.025]"
@@ -36,17 +42,31 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.badge}
           </span>
         )}
-      </div>
+      </Link>
       <div className="pt-3">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs text-muted">{product.category}</p>
-            <h3 className="mt-1 text-sm font-semibold text-ink">{product.name}</h3>
+            <h3 className="mt-1 text-sm font-semibold text-ink">
+              <Link
+                className="hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                to={`/product/${product.id}`}
+              >
+                {product.name}
+              </Link>
+            </h3>
           </div>
-          <p className="shrink-0 pt-4 text-sm font-semibold text-ink">{formatPrice(product.price)}</p>
+          <p className="shrink-0 pt-4 text-sm font-semibold text-ink">
+            {formatPrice(product.price)}
+          </p>
         </div>
         <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-          <SizePicker label={product.name} onChange={setSize} sizes={product.sizes} value={size} />
+          <SizePicker
+            label={product.name}
+            onChange={setSize}
+            sizes={product.sizes}
+            value={size}
+          />
           <button
             aria-label={`Add ${product.name}${size ? `, size ${size},` : ","} to cart`}
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-accent px-4 text-xs font-semibold text-accent-ink transition-colors hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:bg-border disabled:text-muted sm:px-5 sm:text-sm"
