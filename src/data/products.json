@@ -1,0 +1,77 @@
+[
+  {
+    "id": "court-low-white",
+    "name": "Court low in white",
+    "category": "Sneakers",
+    "price": 4200,
+    "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=85",
+    "imageAlt": "Red low-top sneaker on a clean background",
+    "sizes": ["39", "40", "41", "42", "43", "44"],
+    "badge": "Just in"
+  },
+  {
+    "id": "everyday-runner",
+    "name": "Everyday runner",
+    "category": "Sneakers",
+    "price": 5600,
+    "image": "https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=900&q=85",
+    "imageAlt": "Classic everyday running sneaker",
+    "sizes": ["39", "40", "41", "42", "43", "44"]
+  },
+  {
+    "id": "street-high",
+    "name": "Street high-top",
+    "category": "Sneakers",
+    "price": 6100,
+    "image": "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?auto=format&fit=crop&w=900&q=85",
+    "imageAlt": "High-top sneaker photographed from the side",
+    "sizes": ["40", "41", "42", "43", "44"],
+    "badge": "Bestseller"
+  },
+  {
+    "id": "canvas-classic",
+    "name": "Canvas classic",
+    "category": "Sneakers",
+    "price": 3500,
+    "image": "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&w=900&q=85",
+    "imageAlt": "Canvas low-top sneaker in a neutral color",
+    "sizes": ["38", "39", "40", "41", "42", "43"]
+  },
+  {
+    "id": "essential-tee",
+    "name": "Essential tee",
+    "category": "Tops",
+    "price": 1200,
+    "image": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85",
+    "imageAlt": "Folded cotton t-shirt in a light neutral shade",
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "daily-hoodie",
+    "name": "Daily hoodie",
+    "category": "Tops",
+    "price": 2900,
+    "image": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85",
+    "imageAlt": "Everyday hooded sweatshirt",
+    "sizes": ["S", "M", "L", "XL"],
+    "badge": "Easy layer"
+  },
+  {
+    "id": "boxy-overshirt",
+    "name": "Boxy overshirt",
+    "category": "Tops",
+    "price": 2600,
+    "image": "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?auto=format&fit=crop&w=900&q=85",
+    "imageAlt": "Relaxed button-up overshirt hanging on a plain background",
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "relaxed-trouser",
+    "name": "Relaxed trouser",
+    "category": "Bottoms",
+    "price": 2400,
+    "image": "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?auto=format&fit=crop&w=900&q=85",
+    "imageAlt": "Relaxed fit everyday trousers",
+    "sizes": ["S", "M", "L", "XL"]
+  }
+]
