@@ -23,7 +23,7 @@ export function ProductPage() {
   useEffect(() => {
     if (!product) return;
     const previousTitle = document.title;
-    document.title = `${product.name} | Shik shop`;
+    document.title = `${product.name} | Shik wearables`;
     return () => {
       document.title = previousTitle;
     };

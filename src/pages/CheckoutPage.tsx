@@ -83,7 +83,7 @@ export function CheckoutPage() {
 
       <div className="mt-5 border-b border-border pb-6 sm:flex sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Shik shop</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Shik wearables</p>
           <h1 className="mt-2 text-4xl font-extrabold tracking-tightest text-ink">Checkout</h1>
         </div>
         <ol aria-label="Checkout progress" className="mt-5 flex items-center gap-3 text-sm sm:mt-0">

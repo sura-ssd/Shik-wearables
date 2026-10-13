@@ -1,4 +1,4 @@
-# Shik shop
+# Shik wearables
 
 Phase 1 storefront for sneakers and everyday clothing, built with React 18, Vite, TypeScript, React Router, Tailwind CSS, and Zustand.
 

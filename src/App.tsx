@@ -149,7 +149,7 @@ export default function App() {
         <div className="mx-auto grid max-w-content gap-8 px-4 py-10 text-sm text-muted sm:px-6 lg:grid-cols-3 lg:px-10">
           <div>
             <p className="text-base font-bold uppercase tracking-[0.12em] text-ink">
-              Shik shop
+              Shik wearables
             </p>
             <p className="mt-3 max-w-[28ch]">
               Sneakers and everyday layers for the rhythm of Addis.

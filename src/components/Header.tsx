@@ -17,11 +17,14 @@ export function Header({ isDark, onThemeToggle }: HeaderProps) {
     <header className="sticky top-0 z-30 border-b border-border bg-canvas/95 backdrop-blur-sm">
       <div className="mx-auto flex h-[68px] max-w-content items-center justify-between px-4 sm:px-6 lg:px-10">
         <Link
-          aria-label="Shik shop home"
-          className="text-[23px] font-extrabold leading-none tracking-tightest text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+          aria-label="Shik wearables home"
+          className="flex items-baseline text-[20px] font-extrabold leading-none tracking-tightest text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
           to="/"
         >
-          shik<span className="text-accent">.</span>
+          Shik<span className="text-accent">.</span>
+          <span className="ml-1.5 text-[11px] font-semibold tracking-normal text-muted">
+            wearables
+          </span>
         </Link>
         <nav
           aria-label="Main navigation"
