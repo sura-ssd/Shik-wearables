@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
 import type { ProductCategory } from "../types";
+import { Dropdown } from "./Dropdown";
 
 export type CategoryFilter = "All" | ProductCategory;
 export type SortOrder = "featured" | "price-ascending" | "price-descending" | "name";
@@ -50,19 +51,17 @@ export function FilterBar({
             value={search}
           />
         </label>
-        <label className="flex min-h-11 items-center rounded-full border border-border bg-surface px-4">
-          <span className="sr-only">Sort products</span>
-          <select
-            className="max-w-full bg-transparent text-sm font-medium text-ink outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-            onChange={(event) => onSortChange(event.target.value as SortOrder)}
-            value={sort}
-          >
-            <option value="featured">Featured</option>
-            <option value="price-ascending">Price: low to high</option>
-            <option value="price-descending">Price: high to low</option>
-            <option value="name">Name: A to Z</option>
-          </select>
-        </label>
+        <Dropdown
+          ariaLabel="Sort products"
+          onChange={(value) => onSortChange(value as SortOrder)}
+          options={[
+            { value: "featured", label: "Featured" },
+            { value: "price-ascending", label: "Price: low to high" },
+            { value: "price-descending", label: "Price: high to low" },
+            { value: "name", label: "Name: A to Z" },
+          ]}
+          value={sort}
+        />
       </div>
     </div>
   );

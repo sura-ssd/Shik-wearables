@@ -1,4 +1,4 @@
-import { Moon, ShoppingBag, Sun } from "lucide-react";
+import { Moon, ShoppingCart, Sun } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCartStore } from "../store/cartStore";
 
@@ -75,7 +75,12 @@ export function Header({ isDark, onThemeToggle }: HeaderProps) {
             onClick={openCart}
             type="button"
           >
-            <ShoppingBag aria-hidden="true" size={21} strokeWidth={1.8} />
+            <span
+              aria-hidden="true"
+              className="relative inline-flex size-7 items-center justify-center"
+            >
+              <ShoppingCart aria-hidden="true" size={25} strokeWidth={2} />
+            </span>
             <span className="absolute right-0 top-0 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-accent-ink">
               {itemCount}
             </span>
