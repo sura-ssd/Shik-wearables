@@ -34,10 +34,7 @@ export function Hero({ isLoading = false }: HeroProps) {
   return (
     <section className="mx-auto grid max-w-content items-center gap-8 px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14 lg:px-10 lg:pb-16 lg:pt-12">
       <div className="relative z-10 py-2 lg:py-8">
-        <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-          <span className="size-1.5 rounded-full bg-accent" />
-          Good things, worn often · Addis Ababa
-        </p>
+        
         <h1 className="max-w-[600px] text-[44px] font-extrabold leading-[0.98] tracking-tightest text-ink sm:text-[60px] lg:text-[70px]">
           Made for <span className="text-muted">every day.</span>
         </h1>
