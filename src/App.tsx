@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import { CartDrawer } from "./components/CartDrawer";
 import {
   FilterBar,
@@ -221,6 +222,7 @@ export default function App() {
       </footer>
 
       <CartDrawer />
+      <Analytics />
     </div>
   );
 }
