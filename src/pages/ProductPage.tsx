@@ -4,12 +4,13 @@ import { Link, useParams } from "react-router-dom";
 import { ProductGrid } from "../components/ProductGrid";
 import { SizePicker } from "../components/SizePicker";
 import { SmoothImage } from "../components/SmoothImage";
-import { products } from "../data/products";
+import { useProducts } from "../hooks/useProducts";
 import { useCartStore } from "../store/cartStore";
 import { formatPrice } from "../utils/formatPrice";
 
 export function ProductPage() {
   const { id } = useParams();
+  const { products, isLoading } = useProducts();
   const product = products.find((item) => item.id === id);
   const [size, setSize] = useState("");
   const addItem = useCartStore((state) => state.addItem);
@@ -28,6 +29,14 @@ export function ProductPage() {
       document.title = previousTitle;
     };
   }, [product]);
+
+  if (isLoading) {
+    return (
+      <section className="mx-auto max-w-content px-4 py-24 text-center sm:px-6 lg:px-10">
+        <p className="text-sm text-muted" role="status">Loading product…</p>
+      </section>
+    );
+  }
 
   if (!product) {
     return (
@@ -50,6 +59,7 @@ export function ProductPage() {
     ...others.filter((item) => item.category === product.category),
     ...others.filter((item) => item.category !== product.category),
   ].slice(0, 4);
+  const soldOut = product.sizes.length === 0;
 
   function handleAdd() {
     if (!product || !size) return;
@@ -97,12 +107,12 @@ export function ProductPage() {
 
           <button
             className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 text-sm font-semibold text-accent-ink transition-colors hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:bg-border disabled:text-muted"
-            disabled={!size}
+            disabled={!size || soldOut}
             onClick={handleAdd}
             type="button"
           >
             <ShoppingBag aria-hidden="true" size={18} />
-            {size ? `Add size ${size} to cart` : "Select a size to add"}
+            {soldOut ? "Sold out" : size ? `Add size ${size} to cart` : "Select a size to add"}
           </button>
 
           <dl className="mt-8 divide-y divide-border border-y border-border text-sm">
@@ -112,7 +122,7 @@ export function ProductPage() {
             </div>
             <div className="flex justify-between gap-4 py-3">
               <dt className="text-muted">Sizes</dt>
-              <dd className="font-medium text-ink">{product.sizes.join(", ")}</dd>
+              <dd className="font-medium text-ink">{soldOut ? "Sold out" : product.sizes.join(", ")}</dd>
             </div>
             <div className="flex justify-between gap-4 py-3">
               <dt className="text-muted">Delivery and returns</dt>
@@ -130,4 +140,4 @@ export function ProductPage() {
       </section>
     </div>
   );
-}
+}

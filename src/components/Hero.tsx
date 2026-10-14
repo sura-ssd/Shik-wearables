@@ -1,25 +1,31 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Pause, Play } from "lucide-react";
-import { heroSlides } from "../data/heroSlides";
+import type { HeroSlide } from "../data/heroSlides";
 import { Skeleton } from "./Skeleton";
 
 const SLIDE_INTERVAL_MS = 5000;
 
 interface HeroProps {
   isLoading?: boolean;
+  slides: HeroSlide[];
 }
 
 function pad(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-export function Hero({ isLoading = false }: HeroProps) {
+export function Hero({ isLoading = false, slides }: HeroProps) {
   const [index, setIndex] = useState(0);
   // Start paused for people who ask their device to reduce motion.
   const [isPlaying, setIsPlaying] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const [isInteracting, setIsInteracting] = useState(false);
-  const slideCount = heroSlides.length;
-  const current = heroSlides[index];
+  const slideCount = slides.length;
+  const current = slides[index] ?? slides[0];
+
+  // If the list of slides gets shorter, go back to the first one.
+  useEffect(() => {
+    setIndex((value) => (value < slides.length ? value : 0));
+  }, [slides.length]);
 
   useEffect(() => {
     if (isLoading || !isPlaying || isInteracting || slideCount < 2) return;
@@ -58,11 +64,15 @@ export function Hero({ isLoading = false }: HeroProps) {
         onMouseLeave={() => setIsInteracting(false)}
         role="group"
       >
-        {isLoading || !current ? (
+        {isLoading ? (
           <Skeleton className="absolute inset-0 rounded-none" />
+        ) : !current ? (
+          <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm font-semibold text-muted">
+            New pieces are on the way.
+          </div>
         ) : (
           <>
-            {heroSlides.map((slide, slideIndex) => (
+            {slides.map((slide, slideIndex) => (
               <img
                 alt={slide.alt}
                 aria-hidden={slideIndex !== index}
@@ -98,7 +108,7 @@ export function Hero({ isLoading = false }: HeroProps) {
                   >
                     {isPlaying ? <Pause aria-hidden="true" size={14} /> : <Play aria-hidden="true" size={14} />}
                   </button>
-                  {heroSlides.map((slide, slideIndex) => (
+                  {slides.map((slide, slideIndex) => (
                     <button
                       aria-current={slideIndex === index}
                       aria-label={`Show ${slide.name}`}

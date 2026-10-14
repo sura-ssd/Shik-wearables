@@ -5,6 +5,8 @@ import { useForm } from "react-hook-form";
 import { ArrowLeft, ArrowRight, MapPin, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { z } from "zod";
+import { supabase } from "../lib/supabase";
+import { useAuthStore } from "../store/authStore";
 import { useCartStore } from "../store/cartStore";
 import { formatPrice } from "../utils/formatPrice";
 
@@ -26,10 +28,22 @@ const checkoutSchema = z.object({
 
 type CheckoutDetails = z.infer<typeof checkoutSchema>;
 
+function friendlyOrderError(message?: string): string {
+  if (message && /stock|unavailable/i.test(message)) {
+    return "Some items in your cart are no longer available in that size or quantity. Please update your cart.";
+  }
+  return "We could not place your order. Please try again.";
+}
+
 export function CheckoutPage() {
   const [step, setStep] = useState<"shipping" | "review">("shipping");
   const [shippingDetails, setShippingDetails] = useState<CheckoutDetails | null>(null);
   const items = useCartStore((state) => state.items);
+  const user = useAuthStore((state) => state.user);
+  const authLoading = useAuthStore((state) => state.isLoading);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const subtotal = items.reduce(
     (total, item) => total + item.product.price * item.quantity,
     0,
@@ -55,6 +69,50 @@ export function CheckoutPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function startPayment() {
+    if (!shippingDetails) return;
+    setIsPaying(true);
+    setPaymentError(null);
+
+    try {
+      // Reuse the order if payment failed to start last time, so stock is not reserved twice.
+      let orderId = pendingOrderId;
+      if (!orderId) {
+        const { data, error } = await supabase.rpc("place_order", {
+          p_items: items.map((item) => ({
+            product_id: item.product.id,
+            size: item.size,
+            quantity: item.quantity,
+          })),
+          p_shipping: {
+            full_name: shippingDetails.fullName,
+            phone: shippingDetails.phone,
+            city: shippingDetails.city,
+            address: shippingDetails.address,
+            delivery_note: shippingDetails.deliveryNote,
+          },
+        });
+        if (error || typeof data !== "string") {
+          throw new Error(friendlyOrderError(error?.message));
+        }
+        orderId = data;
+        setPendingOrderId(orderId);
+      }
+
+      const { data: payment, error: paymentStartError } = await supabase.functions.invoke<{
+        checkoutUrl?: string;
+      }>("initialize-chapa-payment", { body: { orderId } });
+      if (paymentStartError || !payment?.checkoutUrl) {
+        throw new Error("Your order is saved, but we could not start the payment. Please try again.");
+      }
+
+      window.location.assign(payment.checkoutUrl);
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+      setIsPaying(false);
+    }
+  }
+
   if (items.length === 0) {
     return (
       <section className="mx-auto max-w-content px-4 py-20 text-center sm:px-6 lg:px-10">
@@ -66,6 +124,25 @@ export function CheckoutPage() {
         >
           <ArrowLeft aria-hidden="true" size={17} />
           Back to the shop
+        </Link>
+      </section>
+    );
+  }
+
+  if (authLoading) {
+    return <p className="px-4 py-24 text-center text-sm text-muted" role="status">Loading…</p>;
+  }
+
+  if (!user) {
+    return (
+      <section className="mx-auto max-w-content px-4 py-20 text-center sm:px-6 lg:px-10">
+        <h1 className="text-3xl font-extrabold tracking-tightest text-ink">Sign in to check out</h1>
+        <p className="mt-3 text-sm text-muted">Your cart is saved. Sign in or create an account to place your order.</p>
+        <Link
+          className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+          to="/login?redirect=/checkout"
+        >
+          Sign in or create account
         </Link>
       </section>
     );
@@ -177,14 +254,21 @@ export function CheckoutPage() {
                 <div className="flex gap-3">
                   <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0 text-muted" size={19} />
                   <div>
-                    <h3 className="text-sm font-semibold text-ink">Payment is not available yet</h3>
-                    <p className="mt-1 text-sm leading-6 text-muted">Your order has not been placed or charged. Payment and delivery fees will be available once checkout is connected to the shop’s payment service.</p>
+                    <h3 className="text-sm font-semibold text-ink">Pay securely with Chapa</h3>
+                    <p className="mt-1 text-sm leading-6 text-muted">Your items are held for 30 minutes while you pay. Delivery fees are not included in this payment and will be confirmed with you.</p>
                   </div>
                 </div>
               </div>
 
-              <button className="mt-6 inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-border px-6 text-sm font-semibold text-muted sm:w-auto" disabled type="button">
-                Continue to payment <ArrowRight aria-hidden="true" size={17} />
+              {paymentError && <p className="mt-4 text-sm text-danger" role="alert">{paymentError}</p>}
+
+              <button
+                className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 text-sm font-semibold text-accent-ink transition-colors hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:bg-border disabled:text-muted sm:w-auto"
+                disabled={isPaying}
+                onClick={() => void startPayment()}
+                type="button"
+              >
+                {isPaying ? "Starting payment…" : "Continue to payment"} <ArrowRight aria-hidden="true" size={17} />
               </button>
             </div>
           )}
@@ -252,4 +336,4 @@ function Field({ autoComplete, error, hint, label, name, placeholder, register, 
       {error && <p className="mt-1.5 text-sm text-danger" id={errorId}>{error}</p>}
     </div>
   );
-}
+}

@@ -1,5 +1,6 @@
-import { Moon, ShoppingCart, Sun } from "lucide-react";
+import { LogOut, Moon, ShoppingCart, Sun, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuthStore } from "../store/authStore";
 import { useCartStore } from "../store/cartStore";
 
 interface HeaderProps {
@@ -8,6 +9,9 @@ interface HeaderProps {
 }
 
 export function Header({ isDark, onThemeToggle }: HeaderProps) {
+  const user = useAuthStore((state) => state.user);
+  const role = useAuthStore((state) => state.role);
+  const signOut = useAuthStore((state) => state.signOut);
   const openCart = useCartStore((state) => state.openCart);
   const itemCount = useCartStore((state) =>
     state.items.reduce((total, item) => total + item.quantity, 0),
@@ -60,6 +64,32 @@ export function Header({ isDark, onThemeToggle }: HeaderProps) {
           </Link>
         </nav>
         <div className="flex items-center gap-2">
+          {role === "admin" && (
+            <Link
+              className="inline-flex min-h-10 items-center rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+              to="/admin"
+            >
+              Admin
+            </Link>
+          )}
+          {user ? (
+            <button
+              aria-label="Sign out"
+              className="inline-flex size-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              onClick={() => void signOut()}
+              type="button"
+            >
+              <LogOut aria-hidden="true" size={19} />
+            </button>
+          ) : (
+            <Link
+              aria-label="Sign in"
+              className="inline-flex size-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              to="/login"
+            >
+              <User aria-hidden="true" size={19} />
+            </Link>
+          )}
           <button
             aria-label={`Switch to ${isDark ? "light" : "dark"} theme`}
             className="inline-flex size-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"

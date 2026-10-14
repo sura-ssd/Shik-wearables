@@ -60,6 +60,9 @@ export function ProductCard({ product }: ProductCardProps) {
             {formatPrice(product.price)}
           </p>
         </div>
+        {product.sizes.length === 0 ? (
+          <p className="mt-3 text-sm font-semibold text-muted">Sold out</p>
+        ) : (
         <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
           <SizePicker
             label={product.name}
@@ -78,6 +81,7 @@ export function ProductCard({ product }: ProductCardProps) {
             <span className="hidden sm:inline">Add to cart</span>
           </button>
         </div>
+        )}
       </div>
     </article>
   );

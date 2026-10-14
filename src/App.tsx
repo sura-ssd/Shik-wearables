@@ -10,19 +10,31 @@ import { Hero } from "./components/Hero";
 import { ProductGrid } from "./components/ProductGrid";
 import { Skeleton } from "./components/Skeleton";
 import { TopLoader } from "./components/TopLoader";
-import { heroSlides } from "./data/heroSlides";
-import { products } from "./data/products";
+import { buildHeroSlides } from "./data/heroSlides";
+import { useProducts } from "./hooks/useProducts";
 import { useInitialLoad } from "./hooks/useInitialLoad";
 import { Navigate, Route, Routes } from "react-router-dom";
 // import { ScrollManager } from "./components/ScrollManager";
 import { ProductPage } from "./pages/ProductPage";
 import { CheckoutPage } from "./pages/CheckoutPage";
+import { AdminPage } from "./pages/AdminPage";
+import { LoginPage } from "./pages/LoginPage";
+import { OrderCompletePage } from "./pages/OrderCompletePage";
+import { useAuthStore } from "./store/authStore";
 
 export default function App() {
   const [category, setCategory] = useState<CategoryFilter>("All");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOrder>("featured");
-  const isLoading = !useInitialLoad(heroSlides[0]?.image);
+  const {
+    products,
+    isLoading: productsLoading,
+    error: productsError,
+    reload,
+  } = useProducts();
+  const slides = useMemo(() => buildHeroSlides(products), [products]);
+  const isReady = useInitialLoad(slides[0]?.image);
+  const isLoading = !isReady || productsLoading;
   const [isDark, setIsDark] = useState(() => {
     const savedTheme = localStorage.getItem("shik-shop-theme");
     return savedTheme
@@ -52,6 +64,9 @@ export default function App() {
       window.removeEventListener("shik:category", handleCategoryChange);
   }, []);
 
+  // Start listening for sign-in / sign-out once for the whole app.
+  useEffect(() => useAuthStore.getState().init(), []);
+
   const visibleProducts = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -78,7 +93,7 @@ export default function App() {
           return 0;
       }
     });
-  }, [category, search, sort]);
+  }, [category, products, search, sort]);
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
@@ -96,7 +111,7 @@ export default function App() {
           <Route
             element={
               <>
-                <Hero isLoading={isLoading} />
+                <Hero isLoading={isLoading} slides={slides} />
 
                 <section
                   className="mx-auto max-w-content px-4 pb-14 sm:px-6 lg:px-10"
@@ -129,10 +144,35 @@ export default function App() {
                   />
 
                   <div className="mt-8">
-                    <ProductGrid
-                      isLoading={isLoading}
-                      products={visibleProducts}
-                    />
+                    {productsError ? (
+                      <div className="border-y border-border py-16 text-center" role="alert">
+                        <h3 className="text-lg font-semibold text-ink">
+                          We could not load the shop
+                        </h3>
+                        <p className="mt-2 text-sm text-muted">{productsError}</p>
+                        <button
+                          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface"
+                          onClick={() => void reload()}
+                          type="button"
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    ) : !isLoading && products.length === 0 ? (
+                      <div className="border-y border-border py-16 text-center">
+                        <h3 className="text-lg font-semibold text-ink">
+                          New pieces are coming soon
+                        </h3>
+                        <p className="mt-2 text-sm text-muted">
+                          Check back shortly for our first collection.
+                        </p>
+                      </div>
+                    ) : (
+                      <ProductGrid
+                        isLoading={isLoading}
+                        products={visibleProducts}
+                      />
+                    )}
                   </div>
                 </section>
               </>
@@ -141,6 +181,9 @@ export default function App() {
           />
           <Route element={<ProductPage />} path="/product/:id" />
           <Route element={<CheckoutPage />} path="/checkout" />
+          <Route element={<LoginPage />} path="/login" />
+          <Route element={<AdminPage />} path="/admin" />
+          <Route element={<OrderCompletePage />} path="/order-complete" />
           <Route element={<Navigate replace to="/" />} path="*" />
         </Routes>
       </main>

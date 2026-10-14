@@ -1,8 +1,4 @@
-import { products } from "./products";
 import type { Product, ProductCategory } from "../types";
-
-// Products shown in the hero, in order. Change this list to feature different pieces.
-const heroProductIds = ["street-high", "daily-hoodie", "relaxed-trouser", "court-low-white"];
 
 export interface HeroSlide {
   id: string;
@@ -13,6 +9,9 @@ export interface HeroSlide {
   cta: string;
 }
 
+const MAX_SLIDES = 4;
+const CATEGORIES: ProductCategory[] = ["Sneakers", "Tops", "Bottoms"];
+
 const ctaByCategory: Record<ProductCategory, string> = {
   Sneakers: "Shop sneakers",
   Tops: "Shop tops",
@@ -22,8 +21,7 @@ const ctaByCategory: Record<ProductCategory, string> = {
 function toSlide(product: Product): HeroSlide {
   return {
     id: product.id,
-    // Catalog images are 900px wide; ask for a larger version for the hero.
-    image: product.image.replace("w=900", "w=1400"),
+    image: product.image,
     alt: product.imageAlt,
     name: product.name,
     category: product.category,
@@ -31,7 +29,18 @@ function toSlide(product: Product): HeroSlide {
   };
 }
 
-export const heroSlides: HeroSlide[] = heroProductIds.flatMap((id) => {
-  const product = products.find((item) => item.id === id);
-  return product ? [toSlide(product)] : [];
-});
+/** Newest product from each category first, then more of the newest, up to four slides. */
+export function buildHeroSlides(products: Product[]): HeroSlide[] {
+  const picked: Product[] = [];
+
+  for (const category of CATEGORIES) {
+    const first = products.find((product) => product.category === category);
+    if (first) picked.push(first);
+  }
+  for (const product of products) {
+    if (picked.length >= MAX_SLIDES) break;
+    if (!picked.includes(product)) picked.push(product);
+  }
+
+  return picked.slice(0, MAX_SLIDES).map(toSlide);
+}

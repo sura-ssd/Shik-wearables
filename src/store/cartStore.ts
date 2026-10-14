@@ -59,6 +59,9 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "shik-shop-cart",
+      // Carts saved before the shop moved to Supabase hold old product ids, so start fresh.
+      version: 2,
+      migrate: () => ({ items: [] }) as unknown as CartState,
       partialize: (state) => ({ items: state.items }) as CartState,
     },
   ),
