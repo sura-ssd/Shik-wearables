@@ -40,6 +40,7 @@ export function CheckoutPage() {
   const [shippingDetails, setShippingDetails] = useState<CheckoutDetails | null>(null);
   const items = useCartStore((state) => state.items);
   const user = useAuthStore((state) => state.user);
+  const isRestoring = useCartStore((state) => state.isRestoring);
   const authLoading = useAuthStore((state) => state.isLoading);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
@@ -111,6 +112,10 @@ export function CheckoutPage() {
       setPaymentError(error instanceof Error ? error.message : "Something went wrong. Please try again.");
       setIsPaying(false);
     }
+  }
+
+  if (isRestoring && items.length === 0) {
+    return <p className="px-4 py-24 text-center text-sm text-muted" role="status">Restoring your cart…</p>;
   }
 
   if (items.length === 0) {

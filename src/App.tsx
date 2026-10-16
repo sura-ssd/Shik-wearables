@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { CartDrawer } from "./components/CartDrawer";
 import {
   FilterBar,
@@ -12,15 +12,28 @@ import { Skeleton } from "./components/Skeleton";
 import { TopLoader } from "./components/TopLoader";
 import { buildHeroSlides } from "./data/heroSlides";
 import { useProducts } from "./hooks/useProducts";
+import { startCartSync } from "./lib/cartSync";
 import { useInitialLoad } from "./hooks/useInitialLoad";
 import { Navigate, Route, Routes } from "react-router-dom";
 // import { ScrollManager } from "./components/ScrollManager";
-import { ProductPage } from "./pages/ProductPage";
-import { CheckoutPage } from "./pages/CheckoutPage";
-import { AdminPage } from "./pages/AdminPage";
-import { LoginPage } from "./pages/LoginPage";
-import { OrderCompletePage } from "./pages/OrderCompletePage";
 import { useAuthStore } from "./store/authStore";
+
+// These pages load only when someone opens them, which keeps the first download small.
+const ProductPage = lazy(() =>
+  import("./pages/ProductPage").then((module) => ({ default: module.ProductPage })),
+);
+const CheckoutPage = lazy(() =>
+  import("./pages/CheckoutPage").then((module) => ({ default: module.CheckoutPage })),
+);
+const AdminPage = lazy(() =>
+  import("./pages/AdminPage").then((module) => ({ default: module.AdminPage })),
+);
+const LoginPage = lazy(() =>
+  import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })),
+);
+const OrderCompletePage = lazy(() =>
+  import("./pages/OrderCompletePage").then((module) => ({ default: module.OrderCompletePage })),
+);
 
 export default function App() {
   const [category, setCategory] = useState<CategoryFilter>("All");
@@ -67,6 +80,9 @@ export default function App() {
   // Start listening for sign-in / sign-out once for the whole app.
   useEffect(() => useAuthStore.getState().init(), []);
 
+  // Save the cart online while someone is signed in.
+  useEffect(() => startCartSync(), []);
+
   const visibleProducts = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -107,85 +123,93 @@ export default function App() {
       />
 
       <main aria-busy={isLoading}>
-        <Routes>
-          <Route
-            element={
-              <>
-                <Hero isLoading={isLoading} slides={slides} />
+        <Suspense
+          fallback={
+            <p className="px-4 py-24 text-center text-sm text-muted" role="status">
+              Loading…
+            </p>
+          }
+        >
+          <Routes>
+            <Route
+              element={
+                <>
+                  <Hero isLoading={isLoading} slides={slides} />
 
-                <section
-                  className="mx-auto max-w-content px-4 pb-14 sm:px-6 lg:px-10"
-                  id="shop"
-                >
-                  <div className="mb-6 flex items-end justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                        The collection
-                      </p>
-                      <h2 className="mt-1 text-2xl font-extrabold tracking-tightest text-ink sm:text-3xl">
-                        Wear on repeat
-                      </h2>
-                    </div>
-                    {isLoading ? (
-                      <Skeleton className="mb-1 h-4 w-16" />
-                    ) : (
-                      <p className="pb-1 text-sm text-muted">
-                        {visibleProducts.length} pieces
-                      </p>
-                    )}
-                  </div>
-                  <FilterBar
-                    category={category}
-                    onCategoryChange={setCategory}
-                    onSearchChange={setSearch}
-                    onSortChange={setSort}
-                    search={search}
-                    sort={sort}
-                  />
-
-                  <div className="mt-8">
-                    {productsError ? (
-                      <div className="border-y border-border py-16 text-center" role="alert">
-                        <h3 className="text-lg font-semibold text-ink">
-                          We could not load the shop
-                        </h3>
-                        <p className="mt-2 text-sm text-muted">{productsError}</p>
-                        <button
-                          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface"
-                          onClick={() => void reload()}
-                          type="button"
-                        >
-                          Try again
-                        </button>
-                      </div>
-                    ) : !isLoading && products.length === 0 ? (
-                      <div className="border-y border-border py-16 text-center">
-                        <h3 className="text-lg font-semibold text-ink">
-                          New pieces are coming soon
-                        </h3>
-                        <p className="mt-2 text-sm text-muted">
-                          Check back shortly for our first collection.
+                  <section
+                    className="mx-auto max-w-content px-4 pb-14 sm:px-6 lg:px-10"
+                    id="shop"
+                  >
+                    <div className="mb-6 flex items-end justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                          The collection
                         </p>
+                        <h2 className="mt-1 text-2xl font-extrabold tracking-tightest text-ink sm:text-3xl">
+                          Wear on repeat
+                        </h2>
                       </div>
-                    ) : (
-                      <ProductGrid
-                        isLoading={isLoading}
-                        products={visibleProducts}
-                      />
-                    )}
-                  </div>
-                </section>
-              </>
-            }
-            path="/"
-          />
-          <Route element={<ProductPage />} path="/product/:id" />
-          <Route element={<CheckoutPage />} path="/checkout" />
-          <Route element={<LoginPage />} path="/login" />
-          <Route element={<AdminPage />} path="/admin" />
-          <Route element={<OrderCompletePage />} path="/order-complete" />
-          <Route element={<Navigate replace to="/" />} path="*" />
-        </Routes>
+                      {isLoading ? (
+                        <Skeleton className="mb-1 h-4 w-16" />
+                      ) : (
+                        <p className="pb-1 text-sm text-muted">
+                          {visibleProducts.length} pieces
+                        </p>
+                      )}
+                    </div>
+                    <FilterBar
+                      category={category}
+                      onCategoryChange={setCategory}
+                      onSearchChange={setSearch}
+                      onSortChange={setSort}
+                      search={search}
+                      sort={sort}
+                    />
+
+                    <div className="mt-8">
+                      {productsError ? (
+                        <div className="border-y border-border py-16 text-center" role="alert">
+                          <h3 className="text-lg font-semibold text-ink">
+                            We could not load the shop
+                          </h3>
+                          <p className="mt-2 text-sm text-muted">{productsError}</p>
+                          <button
+                            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface"
+                            onClick={() => void reload()}
+                            type="button"
+                          >
+                            Try again
+                          </button>
+                        </div>
+                      ) : !isLoading && products.length === 0 ? (
+                        <div className="border-y border-border py-16 text-center">
+                          <h3 className="text-lg font-semibold text-ink">
+                            New pieces are coming soon
+                          </h3>
+                          <p className="mt-2 text-sm text-muted">
+                            Check back shortly for our first collection.
+                          </p>
+                        </div>
+                      ) : (
+                        <ProductGrid
+                          isLoading={isLoading}
+                          products={visibleProducts}
+                        />
+                      )}
+                    </div>
+                  </section>
+                </>
+              }
+              path="/"
+            />
+            <Route element={<ProductPage />} path="/product/:id" />
+            <Route element={<CheckoutPage />} path="/checkout" />
+            <Route element={<LoginPage />} path="/login" />
+            <Route element={<AdminPage />} path="/admin" />
+            <Route element={<OrderCompletePage />} path="/order-complete" />
+            <Route element={<Navigate replace to="/" />} path="*" />
+          </Routes>
+        </Suspense>
       </main>
 
       <footer className="border-t border-border bg-canvas">

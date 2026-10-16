@@ -11,6 +11,9 @@ export function CartDrawer() {
   const closeCart = useCartStore((state) => state.closeCart);
   const setQuantity = useCartStore((state) => state.setQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
+  const notice = useCartStore((state) => state.notice);
+  const isRestoring = useCartStore((state) => state.isRestoring);
+  const dismissNotice = useCartStore((state) => state.dismissNotice);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const subtotal = items.reduce((total, item) => total + item.product.price * item.quantity, 0);
 
@@ -59,7 +62,19 @@ export function CartDrawer() {
             <X aria-hidden="true" size={21} />
           </button>
         </div>
-        {items.length === 0 ? (
+        {notice && (
+          <div className="flex items-start justify-between gap-3 border-b border-border bg-surface px-5 py-3 text-sm text-ink sm:px-7" role="status">
+            <p>{notice}</p>
+            <button aria-label="Dismiss message" className="shrink-0 text-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent" onClick={dismissNotice} type="button">
+              <X aria-hidden="true" size={16} />
+            </button>
+          </div>
+        )}
+        {isRestoring && items.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center px-8 text-center">
+            <p className="text-sm text-muted" role="status">Restoring your cart…</p>
+          </div>
+        ) : items.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
             <p className="text-lg font-semibold text-ink">Your cart is empty</p>
             <p className="mt-2 text-sm text-muted">Find something you will reach for every day.</p>
