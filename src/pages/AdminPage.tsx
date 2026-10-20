@@ -218,7 +218,7 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
   }
 
   return (
-    <form className="h-fit space-y-6 rounded-2xl border border-border bg-surface p-5 sm:p-6" noValidate onSubmit={handleSubmit}>
+    <form className="h-fit min-w-0 space-y-6 rounded-2xl border border-border bg-surface p-5 sm:p-6" noValidate onSubmit={handleSubmit}>
       <h2 className="text-xl font-bold tracking-tight text-ink">Post a product</h2>
 
       <div>
@@ -252,7 +252,7 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
         <input aria-label="Photo description" className={`${inputClass} mt-3`} onChange={(event) => setImageAlt(event.target.value)} placeholder="Describe the photo (for screen readers)" type="text" value={imageAlt} />
       </div>
 
-      <fieldset>
+      <fieldset className="min-w-0">
         <legend className="mb-1 text-sm font-semibold text-ink">Colors <span className="font-normal text-muted">(optional)</span></legend>
         <p className="mb-3 text-xs text-muted">Skip this if the product comes in one color. Each color can have its own photo, shown when a customer picks it.</p>
         <div className="mb-3 flex flex-wrap gap-2">
@@ -283,7 +283,7 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
         </ul>
       </fieldset>
 
-      <fieldset>
+      <fieldset className="min-w-0">
         <legend className="mb-2 text-sm font-semibold text-ink">Sizes</legend>
         <div className="mb-3 flex flex-wrap gap-2">
           <button className={smallButton} onClick={() => usePreset(SHOE_SIZES)} type="button">Shoe sizes 39–44</button>
@@ -306,44 +306,35 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
       </fieldset>
 
       {sizes.length > 0 && (
-        <fieldset>
+        <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink">Stock {colors.length > 0 ? "for each color and size" : "for each size"}</legend>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr>
-                  <th className="py-2 pr-3 font-semibold text-muted">{colors.length > 0 ? "Color" : ""}</th>
-                  {sizes.map((row) => <th className="px-1 py-2 text-center font-semibold text-muted" key={row.id}>{row.size || "?"}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {(colors.length > 0 ? colors : [null]).map((color) => (
-                  <tr key={color?.id ?? "none"}>
-                    <th className="whitespace-nowrap py-1 pr-3 font-semibold text-ink" scope="row">
-                      {color ? (
-                        <span className="inline-flex items-center gap-2">
-                          <span aria-hidden="true" className="size-3 rounded-full border border-border" style={{ backgroundColor: color.hex }} />
-                          {color.name || "Unnamed"}
-                        </span>
-                      ) : "Units in stock"}
-                    </th>
-                    {sizes.map((row) => (
-                      <td className="px-1 py-1" key={row.id}>
-                        <input
-                          aria-label={`Stock, ${color ? `${color.name || "color"}, ` : ""}size ${row.size || "?"}`}
-                          className="min-h-10 w-16 rounded-full border border-border bg-surface px-2 text-center text-sm text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-                          inputMode="numeric"
-                          onChange={(event) => setStock({ ...stock, [stockKey(color?.id ?? null, row.id)]: event.target.value })}
-                          placeholder="0"
-                          type="text"
-                          value={stock[stockKey(color?.id ?? null, row.id)] ?? ""}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            {(colors.length > 0 ? colors : [null]).map((color) => (
+              <div key={color?.id ?? "none"}>
+                {color && (
+                  <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-ink">
+                    <span aria-hidden="true" className="size-3 rounded-full border border-border" style={{ backgroundColor: color.hex }} />
+                    {color.name || "Unnamed"}
+                  </p>
+                )}
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(72px,1fr))] gap-2">
+                  {sizes.map((row) => (
+                    <label className="text-xs font-semibold text-muted" key={row.id}>
+                      {row.size || "?"}
+                      <input
+                        aria-label={`Stock, ${color ? `${color.name || "color"}, ` : ""}size ${row.size || "?"}`}
+                        className="mt-1 min-h-10 w-full rounded-full border border-border bg-surface px-2 text-center text-sm text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                        inputMode="numeric"
+                        onChange={(event) => setStock({ ...stock, [stockKey(color?.id ?? null, row.id)]: event.target.value })}
+                        placeholder="0"
+                        type="text"
+                        value={stock[stockKey(color?.id ?? null, row.id)] ?? ""}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </fieldset>
       )}
