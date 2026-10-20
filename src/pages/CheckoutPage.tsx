@@ -284,7 +284,7 @@ export function CheckoutPage() {
           <ul className="mt-4 divide-y divide-border">
             {items.map((item) => (
               <li className="flex gap-3 py-4" key={`${item.product.id}-${item.size}`}>
-                <img alt={item.product.imageAlt} className="size-16 shrink-0 rounded-xl bg-canvas object-cover" height="128" loading="lazy" src={item.product.image} width="128" />
+                <img alt={item.product.imageAlt} className="size-16 shrink-0 rounded-xl bg-canvas object-contain" height="128" loading="lazy" src={item.product.image} width="128" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-ink">{item.product.name}</p>
                   <p className="mt-1 text-xs text-muted">Size {item.size} · Qty {item.quantity}</p>

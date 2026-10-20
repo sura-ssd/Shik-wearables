@@ -1,9 +1,13 @@
+import { optimizeImage } from "./imageOptimize";
 import { compareSizes } from "./products";
 import { supabase } from "./supabase";
 import type { ProductCategory } from "../types";
 
 const IMAGE_BUCKET = "product-images";
-export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+// Largest photo someone may choose. It is shrunk before upload.
+export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+// Storage limit for the optimized photo (set in the storage migration).
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 export interface AdminVariant {
   id: string;
@@ -80,11 +84,15 @@ export async function fetchAdminProducts(): Promise<AdminProduct[]> {
 /** Uploads the photo, then posts the product and its sizes. Rolls back if a step fails. */
 export async function createProduct(input: NewProductInput): Promise<string> {
   const baseId = slugify(input.name);
-  const imagePath = `${baseId}/${Date.now()}.${extensionFor(input.image)}`;
+  const image = await optimizeImage(input.image);
+  if (image.size > MAX_UPLOAD_BYTES) {
+    throw new Error("That photo is still too large after compressing. Please choose a smaller one.");
+  }
+  const imagePath = `${baseId}/${Date.now()}.${extensionFor(image)}`;
   const bucket = supabase.storage.from(IMAGE_BUCKET);
 
-  const upload = await bucket.upload(imagePath, input.image, {
-    contentType: input.image.type,
+  const upload = await bucket.upload(imagePath, image, {
+    contentType: image.type,
     cacheControl: "31536000",
   });
   if (upload.error) throw new Error(`Image upload failed: ${upload.error.message}`);

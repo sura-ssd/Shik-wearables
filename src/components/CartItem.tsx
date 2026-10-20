@@ -15,7 +15,7 @@ export function CartItem({ item, onQuantityChange, onRemove }: CartItemProps) {
       <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-surface">
         <SmoothImage
           alt={item.product.imageAlt}
-          className="size-full object-cover"
+          className="size-full object-contain"
           height="160"
           loading="lazy"
           src={item.product.image}

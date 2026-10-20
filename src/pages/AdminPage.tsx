@@ -133,7 +133,7 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
     if (!Number.isInteger(priceEtb) || priceEtb <= 0) return setError("Enter the price in whole birr, like 2500.");
     if (!image) return setError("Choose a product photo.");
     if (!["image/jpeg", "image/png", "image/webp"].includes(image.type)) return setError("Use a JPG, PNG or WebP photo.");
-    if (image.size > MAX_IMAGE_BYTES) return setError("The photo must be under 5 MB.");
+    if (image.size > MAX_IMAGE_BYTES) return setError("The photo must be under 20 MB.");
     if (rows.length === 0) return setError("Add at least one size.");
     if (sizes.some((size) => size === "") || new Set(sizes.map((size) => size.toLowerCase())).size !== sizes.length) {
       return setError("Every size needs a name, and sizes cannot repeat.");
@@ -186,7 +186,8 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
       <div>
         <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="p-image">Photo</label>
         <input accept="image/jpeg,image/png,image/webp" className="block w-full text-sm text-muted file:mr-4 file:rounded-full file:border-0 file:bg-accent file:px-4 file:py-2 file:text-xs file:font-semibold file:text-accent-ink" id="p-image" onChange={(event) => setImage(event.target.files?.[0] ?? null)} type="file" />
-        {preview && <img alt="Preview of the chosen product" className="mt-3 aspect-[4/4.5] w-40 rounded-xl object-cover" src={preview} />}
+        <p className="mt-2 text-xs text-muted">Photos are resized and compressed automatically. The whole photo is shown in the shop, so use the shape you want customers to see.</p>
+        {preview && <img alt="Preview of the chosen product" className="mt-3 aspect-[4/4.5] w-40 rounded-xl bg-canvas object-contain" src={preview} />}
         <input aria-label="Photo description" className={`${inputClass} mt-3`} onChange={(event) => setImageAlt(event.target.value)} placeholder="Describe the photo (for screen readers)" type="text" value={imageAlt} />
       </div>
 
@@ -256,7 +257,7 @@ function AdminProductRow({ product, onChanged }: { product: AdminProduct; onChan
   return (
     <li className="rounded-2xl border border-border bg-surface p-4">
       <div className="flex gap-4">
-        <img alt="" className="size-20 shrink-0 rounded-xl object-cover" height="160" loading="lazy" src={product.imageUrl} width="160" />
+        <img alt="" className="size-20 shrink-0 rounded-xl bg-canvas object-contain" height="160" loading="lazy" src={product.imageUrl} width="160" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-ink">{product.name}</p>
           <p className="mt-1 text-xs text-muted">{product.category} · {formatPrice(product.priceEtb)} · {product.active ? "Visible in shop" : "Hidden"}</p>

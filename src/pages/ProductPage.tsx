@@ -81,7 +81,7 @@ export function ProductPage() {
         <div className="relative aspect-[4/4.5] overflow-hidden rounded-[28px] bg-surface">
           <SmoothImage
             alt={product.imageAlt}
-            className="size-full object-cover"
+            className="size-full object-contain"
             height="1125"
             src={product.image.replace("w=900", "w=1400")}
             width="1000"

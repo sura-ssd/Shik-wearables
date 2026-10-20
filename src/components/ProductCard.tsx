@@ -31,7 +31,7 @@ export function ProductCard({ product }: ProductCardProps) {
       >
         <SmoothImage
           alt={product.imageAlt}
-          className="size-full object-cover group-hover:scale-[1.025]"
+          className="size-full object-contain group-hover:scale-[1.025]"
           height="900"
           loading="lazy"
           src={product.image}

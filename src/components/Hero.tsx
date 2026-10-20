@@ -73,18 +73,30 @@ export function Hero({ isLoading = false, slides }: HeroProps) {
         ) : (
           <>
             {slides.map((slide, slideIndex) => (
-              <img
-                alt={slide.alt}
+              <div
                 aria-hidden={slideIndex !== index}
-                className={`absolute inset-0 size-full object-cover transition-opacity duration-700 motion-reduce:transition-none ${
+                className={`absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none ${
                   slideIndex === index ? "opacity-100" : "opacity-0"
                 }`}
-                height="1050"
                 key={slide.id}
-                loading={slideIndex === 0 ? "eager" : "lazy"}
-                src={slide.image}
-                width="1400"
-              />
+              >
+                {/* Soft blurred copy that fills the space beside the photo. */}
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 size-full scale-110 object-cover opacity-60 blur-2xl"
+                  loading="lazy"
+                  src={slide.image}
+                />
+                <img
+                  alt={slide.alt}
+                  className="relative size-full object-contain"
+                  height="1050"
+                  loading={slideIndex === 0 ? "eager" : "lazy"}
+                  src={slide.image}
+                  width="1400"
+                />
+              </div>
             ))}
             <a
               className="absolute right-4 top-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-canvas/95 px-4 text-xs font-semibold text-ink transition-colors hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:right-6 sm:top-6"
