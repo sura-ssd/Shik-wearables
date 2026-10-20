@@ -14,11 +14,12 @@ export function CartItem({ item, onQuantityChange, onRemove }: CartItemProps) {
     <li className="flex gap-4 border-b border-border py-5">
       <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-surface">
         <SmoothImage
-          alt={item.product.imageAlt}
+          alt={item.color?.imageAlt ?? item.product.imageAlt}
           className="size-full object-contain"
           height="160"
+          key={item.color?.image ?? item.product.image}
           loading="lazy"
-          src={item.product.image}
+          src={item.color?.image ?? item.product.image}
           width="160"
         />
       </div>
@@ -26,10 +27,21 @@ export function CartItem({ item, onQuantityChange, onRemove }: CartItemProps) {
         <div className="flex items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-ink">{item.product.name}</h3>
-            <p className="mt-1 text-xs text-muted">Size {item.size}</p>
+            <p className="mt-1 flex items-center gap-2 text-xs text-muted">
+              {item.color && (
+                <span
+                  aria-hidden="true"
+                  className="size-3 shrink-0 rounded-full border border-border"
+                  style={{ backgroundColor: item.color.hex }}
+                />
+              )}
+              <span>
+                {item.color ? `${item.color.name} · ` : ""}Size {item.size}
+              </span>
+            </p>
           </div>
           <button
-            aria-label={`Remove ${item.product.name}, size ${item.size}`}
+            aria-label={`Remove ${item.product.name}${item.color ? `, ${item.color.name}` : ""}, size ${item.size}`}
             className="-mr-2 -mt-2 inline-flex size-9 shrink-0 items-center justify-center text-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             onClick={onRemove}
             type="button"

@@ -1,5 +1,20 @@
 import { supabase } from "./supabase";
-import type { Product, ProductCategory } from "../types";
+import type { Product, ProductCategory, ProductColor } from "../types";
+
+interface ColorRow {
+  id: string;
+  name: string;
+  hex: string;
+  image_url: string | null;
+  image_alt: string | null;
+  sort_order: number;
+}
+
+interface VariantRow {
+  color_id: string | null;
+  size: string;
+  stock: number;
+}
 
 interface ProductRow {
   id: string;
@@ -9,7 +24,8 @@ interface ProductRow {
   image_url: string;
   image_alt: string;
   badge: string | null;
-  variants: { size: string; stock: number }[] | null;
+  product_colors: ColorRow[] | null;
+  variants: VariantRow[] | null;
 }
 
 const LETTER_SIZES = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];
@@ -27,6 +43,31 @@ export function compareSizes(left: string, right: string): number {
 }
 
 function toProduct(row: ProductRow): Product {
+  const inStock = (row.variants ?? []).filter((variant) => variant.stock > 0);
+
+  const colors: ProductColor[] = [...(row.product_colors ?? [])]
+    .sort((left, right) => left.sort_order - right.sort_order)
+    .map((color) => ({
+      id: color.id,
+      name: color.name,
+      hex: color.hex,
+      image: color.image_url ?? row.image_url,
+      imageAlt: color.image_alt || `${row.name}, ${color.name}`,
+      sizes: inStock
+        .filter((variant) => variant.color_id === color.id)
+        .map((variant) => variant.size)
+        .sort(compareSizes),
+    }));
+
+  // Only sizes that are in stock can be chosen. An empty list means "sold out".
+  const sizes =
+    colors.length > 0
+      ? [...new Set(colors.flatMap((color) => color.sizes))].sort(compareSizes)
+      : inStock
+          .filter((variant) => variant.color_id === null)
+          .map((variant) => variant.size)
+          .sort(compareSizes);
+
   return {
     id: row.id,
     name: row.name,
@@ -35,11 +76,8 @@ function toProduct(row: ProductRow): Product {
     image: row.image_url,
     imageAlt: row.image_alt,
     badge: row.badge ?? undefined,
-    // Only sizes that are in stock can be chosen. An empty list means "sold out".
-    sizes: (row.variants ?? [])
-      .filter((variant) => variant.stock > 0)
-      .map((variant) => variant.size)
-      .sort(compareSizes),
+    sizes,
+    colors,
   };
 }
 
@@ -47,7 +85,9 @@ function toProduct(row: ProductRow): Product {
 export async function fetchProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, category, price_etb, image_url, image_alt, badge, variants(size, stock)")
+    .select(
+      "id, name, category, price_etb, image_url, image_alt, badge, product_colors(id, name, hex, image_url, image_alt, sort_order), variants(color_id, size, stock)",
+    )
     .eq("active", true)
     .order("created_at", { ascending: false });
 

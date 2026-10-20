@@ -1,25 +1,47 @@
 import { useState } from "react";
 import { ShoppingBag } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useCartStore } from "../store/cartStore";
 import type { Product } from "../types";
+import { toCartColor } from "../utils/cartLine";
 import { formatPrice } from "../utils/formatPrice";
+import { ColorSwatches } from "./ColorSwatches";
 import { SizePicker } from "./SizePicker";
 import { SmoothImage } from "./SmoothImage";
-import { Link } from "react-router-dom";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const [colorId, setColorId] = useState("");
   const [size, setSize] = useState("");
   const addItem = useCartStore((state) => state.addItem);
 
-  function handleAdd() {
-    if (!size) return;
-    addItem(product, size);
+  // Until a color is picked, show the first color that is in stock.
+  const color =
+    product.colors.find((item) => item.id === colorId) ??
+    product.colors.find((item) => item.sizes.length > 0) ??
+    product.colors[0];
+  const sizes = color ? color.sizes : product.sizes;
+  const image = color?.image ?? product.image;
+  const imageAlt = color?.imageAlt ?? product.imageAlt;
+  const soldOut = product.sizes.length === 0;
+
+  function handleColorChange(nextColorId: string) {
+    setColorId(nextColorId);
     setSize("");
   }
+
+  function handleAdd() {
+    if (!size) return;
+    addItem(product, size, color ? toCartColor(color) : undefined);
+    setSize("");
+  }
+
+  const choice = [color && product.colors.length > 1 ? color.name : "", size ? `size ${size}` : ""]
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <article className="group min-w-0">
@@ -30,11 +52,12 @@ export function ProductCard({ product }: ProductCardProps) {
         to={`/product/${product.id}`}
       >
         <SmoothImage
-          alt={product.imageAlt}
+          alt={imageAlt}
           className="size-full object-contain group-hover:scale-[1.025]"
           height="900"
+          key={image}
           loading="lazy"
-          src={product.image}
+          src={image}
           width="800"
         />
         {product.badge && (
@@ -60,27 +83,34 @@ export function ProductCard({ product }: ProductCardProps) {
             {formatPrice(product.price)}
           </p>
         </div>
-        {product.sizes.length === 0 ? (
+
+        {product.colors.length > 1 && color && (
+          <div className="mt-3">
+            <ColorSwatches
+              colors={product.colors}
+              label={product.name}
+              onChange={handleColorChange}
+              value={color.id}
+            />
+          </div>
+        )}
+
+        {soldOut ? (
           <p className="mt-3 text-sm font-semibold text-muted">Sold out</p>
         ) : (
-        <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-          <SizePicker
-            label={product.name}
-            onChange={setSize}
-            sizes={product.sizes}
-            value={size}
-          />
-          <button
-            aria-label={`Add ${product.name}${size ? `, size ${size},` : ","} to cart`}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-accent px-4 text-xs font-semibold text-accent-ink transition-colors hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:bg-border disabled:text-muted sm:px-5 sm:text-sm"
-            disabled={!size}
-            onClick={handleAdd}
-            type="button"
-          >
-            <ShoppingBag aria-hidden="true" size={16} />
-            <span className="hidden sm:inline">Add to cart</span>
-          </button>
-        </div>
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+            <SizePicker label={product.name} onChange={setSize} sizes={sizes} value={size} />
+            <button
+              aria-label={`Add ${product.name}${choice ? `, ${choice},` : ","} to cart`}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-accent px-4 text-xs font-semibold text-accent-ink transition-colors hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:bg-border disabled:text-muted sm:px-5 sm:text-sm"
+              disabled={!size}
+              onClick={handleAdd}
+              type="button"
+            >
+              <ShoppingBag aria-hidden="true" size={16} />
+              <span className="hidden sm:inline">Add to cart</span>
+            </button>
+          </div>
         )}
       </div>
     </article>

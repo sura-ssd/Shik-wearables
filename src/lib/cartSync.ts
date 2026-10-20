@@ -1,6 +1,7 @@
 import { useCartStore } from "../store/cartStore";
 import { useProductStore } from "../store/productStore";
 import type { CartLine, Product } from "../types";
+import { cartLineKey, toCartColor } from "../utils/cartLine";
 import { supabase } from "./supabase";
 
 const SAVE_DELAY_MS = 500;
@@ -8,17 +9,17 @@ const MAX_LINE_QUANTITY = 10;
 
 interface SavedLine {
   product_id: string;
+  color_id?: string | null;
   size: string;
   quantity: number;
 }
-
-const lineKey = (productId: string, size: string) => `${productId}::${size}`;
 
 function isSavedLine(value: unknown): value is SavedLine {
   const line = value as Partial<SavedLine> | null;
   return (
     typeof line?.product_id === "string" &&
     typeof line.size === "string" &&
+    (line.color_id === undefined || line.color_id === null || typeof line.color_id === "string") &&
     Number.isInteger(line.quantity) &&
     (line.quantity as number) > 0
   );
@@ -42,6 +43,7 @@ async function writeSavedCart(userId: string, items: CartLine[]): Promise<void> 
   }
   const saved: SavedLine[] = items.map((line) => ({
     product_id: line.product.id,
+    color_id: line.color?.id ?? null,
     size: line.size,
     quantity: line.quantity,
   }));
@@ -61,11 +63,25 @@ function resolveLines(saved: SavedLine[], products: Product[]): { lines: CartLin
 
   for (const line of saved) {
     const product = products.find((item) => item.id === line.product_id);
-    if (!product || !product.sizes.includes(line.size)) {
+    if (!product) {
       removed += 1;
       continue;
     }
-    lines.push({ product, size: line.size, quantity: Math.min(line.quantity, MAX_LINE_QUANTITY) });
+
+    // Products with colors need that exact color in stock in that size.
+    const color = line.color_id ? product.colors.find((item) => item.id === line.color_id) : undefined;
+    const available = product.colors.length > 0 ? color?.sizes : product.sizes;
+    if (!available?.includes(line.size)) {
+      removed += 1;
+      continue;
+    }
+
+    lines.push({
+      product,
+      size: line.size,
+      color: color ? toCartColor(color) : undefined,
+      quantity: Math.min(line.quantity, MAX_LINE_QUANTITY),
+    });
   }
   return { lines, removed };
 }
@@ -73,7 +89,7 @@ function resolveLines(saved: SavedLine[], products: Product[]): { lines: CartLin
 function mergeLines(first: CartLine[], second: CartLine[]): CartLine[] {
   const merged = new Map<string, CartLine>();
   for (const line of [...first, ...second]) {
-    const key = lineKey(line.product.id, line.size);
+    const key = cartLineKey(line);
     const existing = merged.get(key);
     merged.set(key, {
       ...line,

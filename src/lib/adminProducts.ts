@@ -9,8 +9,16 @@ export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 // Storage limit for the optimized photo (set in the storage migration).
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
+export interface AdminColor {
+  id: string;
+  name: string;
+  hex: string;
+  imageUrl: string | null;
+}
+
 export interface AdminVariant {
   id: string;
+  colorId: string | null;
   size: string;
   stock: number;
 }
@@ -22,7 +30,22 @@ export interface AdminProduct {
   priceEtb: number;
   imageUrl: string;
   active: boolean;
+  colors: AdminColor[];
   variants: AdminVariant[];
+}
+
+export interface NewColorInput {
+  name: string;
+  hex: string;
+  /** Photo of this color. Optional: the main photo is used when missing. */
+  image: File | null;
+}
+
+export interface NewVariantInput {
+  /** Position in the colors list, or null for a product without colors. */
+  colorIndex: number | null;
+  size: string;
+  stock: number;
 }
 
 export interface NewProductInput {
@@ -32,7 +55,8 @@ export interface NewProductInput {
   badge: string;
   imageAlt: string;
   image: File;
-  variants: { size: string; stock: number }[];
+  colors: NewColorInput[];
+  variants: NewVariantInput[];
 }
 
 interface AdminProductRow {
@@ -42,7 +66,8 @@ interface AdminProductRow {
   price_etb: number;
   image_url: string;
   active: boolean;
-  variants: AdminVariant[] | null;
+  product_colors: { id: string; name: string; hex: string; image_url: string | null; sort_order: number }[] | null;
+  variants: { id: string; color_id: string | null; size: string; stock: number }[] | null;
 }
 
 function slugify(value: string): string {
@@ -61,11 +86,13 @@ function extensionFor(file: File): string {
   return "jpg";
 }
 
-/** Every product (including hidden ones) with its sizes and stock. Admins only. */
+/** Every product (including hidden ones) with its colors, sizes and stock. Admins only. */
 export async function fetchAdminProducts(): Promise<AdminProduct[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, category, price_etb, image_url, active, variants(id, size, stock)")
+    .select(
+      "id, name, category, price_etb, image_url, active, product_colors(id, name, hex, image_url, sort_order), variants(id, color_id, size, stock)",
+    )
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -77,66 +104,124 @@ export async function fetchAdminProducts(): Promise<AdminProduct[]> {
     priceEtb: row.price_etb,
     imageUrl: row.image_url,
     active: row.active,
-    variants: [...(row.variants ?? [])].sort((left, right) => compareSizes(left.size, right.size)),
+    colors: [...(row.product_colors ?? [])]
+      .sort((left, right) => left.sort_order - right.sort_order)
+      .map((color) => ({ id: color.id, name: color.name, hex: color.hex, imageUrl: color.image_url })),
+    variants: [...(row.variants ?? [])]
+      .sort((left, right) => compareSizes(left.size, right.size))
+      .map((variant) => ({
+        id: variant.id,
+        colorId: variant.color_id,
+        size: variant.size,
+        stock: variant.stock,
+      })),
   }));
 }
 
-/** Uploads the photo, then posts the product and its sizes. Rolls back if a step fails. */
-export async function createProduct(input: NewProductInput): Promise<string> {
-  const baseId = slugify(input.name);
-  const image = await optimizeImage(input.image);
-  if (image.size > MAX_UPLOAD_BYTES) {
-    throw new Error("That photo is still too large after compressing. Please choose a smaller one.");
+async function uploadPhoto(file: File, folder: string): Promise<{ path: string; url: string }> {
+  const optimized = await optimizeImage(file);
+  if (optimized.size > MAX_UPLOAD_BYTES) {
+    throw new Error("A photo is still too large after compressing. Please choose a smaller one.");
   }
-  const imagePath = `${baseId}/${Date.now()}.${extensionFor(image)}`;
-  const bucket = supabase.storage.from(IMAGE_BUCKET);
 
-  const upload = await bucket.upload(imagePath, image, {
-    contentType: image.type,
+  const bucket = supabase.storage.from(IMAGE_BUCKET);
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${extensionFor(optimized)}`;
+  const { error } = await bucket.upload(path, optimized, {
+    contentType: optimized.type,
     cacheControl: "31536000",
   });
-  if (upload.error) throw new Error(`Image upload failed: ${upload.error.message}`);
-  const imageUrl = bucket.getPublicUrl(imagePath).data.publicUrl;
+  if (error) throw new Error(`Image upload failed: ${error.message}`);
 
+  return { path, url: bucket.getPublicUrl(path).data.publicUrl };
+}
+
+/**
+ * Uploads the photos, then posts the product, its colors, and the stock for every color and size.
+ * If any step fails, everything already saved is removed again.
+ */
+export async function createProduct(input: NewProductInput): Promise<string> {
+  const baseId = slugify(input.name);
+  const name = input.name.trim();
+  const uploadedPaths: string[] = [];
   let productId = baseId;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const { error } = await supabase.from("products").insert({
-      id: productId,
-      name: input.name.trim(),
-      category: input.category,
-      price_etb: input.priceEtb,
-      image_url: imageUrl,
-      image_alt: input.imageAlt.trim() || input.name.trim(),
-      badge: input.badge.trim() || null,
-    });
+  let productSaved = false;
 
-    if (!error) break;
+  try {
+    const mainPhoto = await uploadPhoto(input.image, baseId);
+    uploadedPaths.push(mainPhoto.path);
 
-    // A product with this name already exists: retry once with a short suffix.
-    if (error.code === "23505" && attempt === 0) {
-      productId = `${baseId}-${Math.random().toString(36).slice(2, 6)}`;
-      continue;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const { error } = await supabase.from("products").insert({
+        id: productId,
+        name,
+        category: input.category,
+        price_etb: input.priceEtb,
+        image_url: mainPhoto.url,
+        image_alt: input.imageAlt.trim() || name,
+        badge: input.badge.trim() || null,
+      });
+
+      if (!error) {
+        productSaved = true;
+        break;
+      }
+
+      // A product with this name already exists: retry once with a short suffix.
+      if (error.code === "23505" && attempt === 0) {
+        productId = `${baseId}-${Math.random().toString(36).slice(2, 6)}`;
+        continue;
+      }
+      throw new Error(error.message);
     }
 
-    await bucket.remove([imagePath]);
-    throw new Error(error.message);
+    const colorIds: string[] = [];
+    if (input.colors.length > 0) {
+      const colorRows = [];
+      for (const [index, color] of input.colors.entries()) {
+        let imageUrl: string | null = null;
+        if (color.image) {
+          const photo = await uploadPhoto(color.image, `${baseId}/colors`);
+          uploadedPaths.push(photo.path);
+          imageUrl = photo.url;
+        }
+        colorRows.push({
+          product_id: productId,
+          name: color.name.trim(),
+          hex: color.hex.toLowerCase(),
+          image_url: imageUrl,
+          image_alt: `${name}, ${color.name.trim()}`,
+          sort_order: index,
+        });
+      }
+
+      const { data, error } = await supabase.from("product_colors").insert(colorRows).select("id, sort_order");
+      if (error) throw new Error(error.message);
+      for (const row of data ?? []) colorIds[row.sort_order] = row.id;
+    }
+
+    const { error: variantError } = await supabase.from("variants").insert(
+      input.variants.map((variant) => ({
+        product_id: productId,
+        color_id: variant.colorIndex === null ? null : colorIds[variant.colorIndex],
+        size: variant.size.trim(),
+        stock: variant.stock,
+      })),
+    );
+    if (variantError) throw new Error(variantError.message);
+
+    return productId;
+  } catch (error) {
+    // Undo whatever was saved, so a failed post leaves nothing behind.
+    if (productSaved) {
+      await supabase.from("variants").delete().eq("product_id", productId);
+      await supabase.from("product_colors").delete().eq("product_id", productId);
+      await supabase.from("products").delete().eq("id", productId);
+    }
+    if (uploadedPaths.length > 0) {
+      await supabase.storage.from(IMAGE_BUCKET).remove(uploadedPaths);
+    }
+    throw error;
   }
-
-  const { error: variantError } = await supabase.from("variants").insert(
-    input.variants.map((variant) => ({
-      product_id: productId,
-      size: variant.size.trim(),
-      stock: variant.stock,
-    })),
-  );
-
-  if (variantError) {
-    await supabase.from("products").delete().eq("id", productId);
-    await bucket.remove([imagePath]);
-    throw new Error(variantError.message);
-  }
-
-  return productId;
 }
 
 export async function updateStock(variantId: string, stock: number): Promise<void> {

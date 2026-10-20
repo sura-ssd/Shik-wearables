@@ -3,6 +3,7 @@ import { ArrowRight, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCartStore } from "../store/cartStore";
 import { formatPrice } from "../utils/formatPrice";
+import { cartLineKey } from "../utils/cartLine";
 import { CartItem } from "./CartItem";
 
 export function CartDrawer() {
@@ -92,9 +93,9 @@ export function CartDrawer() {
               {items.map((item) => (
                 <CartItem
                   item={item}
-                  key={`${item.product.id}-${item.size}`}
-                  onQuantityChange={(quantity) => setQuantity(item.product.id, item.size, quantity)}
-                  onRemove={() => removeItem(item.product.id, item.size)}
+                  key={cartLineKey(item)}
+                  onQuantityChange={(quantity) => setQuantity(item.product.id, item.size, quantity, item.color?.id)}
+                  onRemove={() => removeItem(item.product.id, item.size, item.color?.id)}
                 />
               ))}
             </ul>

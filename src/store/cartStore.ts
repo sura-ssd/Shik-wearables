@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { CartLine, Product } from "../types";
+import type { CartColor, CartLine, Product } from "../types";
 
 interface CartState {
   items: CartLine[];
@@ -9,9 +9,9 @@ interface CartState {
   isOpen: boolean;
   isRestoring: boolean;
   notice: string | null;
-  addItem: (product: Product, size: string) => void;
-  removeItem: (productId: string, size: string) => void;
-  setQuantity: (productId: string, size: string, quantity: number) => void;
+  addItem: (product: Product, size: string, color?: CartColor) => void;
+  removeItem: (productId: string, size: string, colorId?: string) => void;
+  setQuantity: (productId: string, size: string, quantity: number, colorId?: string) => void;
   clearCart: () => void;
   openCart: () => void;
   closeCart: () => void;
@@ -22,6 +22,10 @@ interface CartState {
   dismissNotice: () => void;
 }
 
+// A cart line is one product in one color and one size.
+const isLine = (item: CartLine, productId: string, size: string, colorId?: string) =>
+  item.product.id === productId && item.size === size && (item.color?.id ?? "") === (colorId ?? "");
+
 export const useCartStore = create<CartState>()(
   persist(
     (set) => ({
@@ -30,39 +34,31 @@ export const useCartStore = create<CartState>()(
       isOpen: false,
       isRestoring: false,
       notice: null,
-      addItem: (product, size) =>
+      addItem: (product, size, color) =>
         set((state) => {
-          const existing = state.items.find(
-            (item) => item.product.id === product.id && item.size === size,
-          );
+          const existing = state.items.find((item) => isLine(item, product.id, size, color?.id));
           return {
             items: existing
               ? state.items.map((item) =>
-                  item.product.id === product.id && item.size === size
+                  isLine(item, product.id, size, color?.id)
                     ? { ...item, quantity: item.quantity + 1 }
                     : item,
                 )
-              : [...state.items, { product, size, quantity: 1 }],
+              : [...state.items, { product, size, color, quantity: 1 }],
             isOpen: true,
           };
         }),
-      removeItem: (productId, size) =>
+      removeItem: (productId, size, colorId) =>
         set((state) => ({
-          items: state.items.filter(
-            (item) => item.product.id !== productId || item.size !== size,
-          ),
+          items: state.items.filter((item) => !isLine(item, productId, size, colorId)),
         })),
-      setQuantity: (productId, size, quantity) =>
+      setQuantity: (productId, size, quantity, colorId) =>
         set((state) => ({
           items:
             quantity < 1
-              ? state.items.filter(
-                  (item) => item.product.id !== productId || item.size !== size,
-                )
+              ? state.items.filter((item) => !isLine(item, productId, size, colorId))
               : state.items.map((item) =>
-                  item.product.id === productId && item.size === size
-                    ? { ...item, quantity }
-                    : item,
+                  isLine(item, productId, size, colorId) ? { ...item, quantity } : item,
                 ),
         })),
       clearCart: () => set({ items: [] }),
