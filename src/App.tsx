@@ -7,6 +7,7 @@ import {
 } from "./components/FilterBar";
 import { Header } from "./components/Header";
 import { Hero } from "./components/Hero";
+import { PageFallback } from "./components/PageFallback";
 import { ProductGrid } from "./components/ProductGrid";
 import { Skeleton } from "./components/Skeleton";
 import { TopLoader } from "./components/TopLoader";
@@ -14,7 +15,7 @@ import { buildHeroSlides } from "./data/heroSlides";
 import { useProducts } from "./hooks/useProducts";
 import { startCartSync } from "./lib/cartSync";
 import { useInitialLoad } from "./hooks/useInitialLoad";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 // import { ScrollManager } from "./components/ScrollManager";
 import { useAuthStore } from "./store/authStore";
 
@@ -36,6 +37,7 @@ const OrderCompletePage = lazy(() =>
 );
 
 export default function App() {
+  const location = useLocation();
   const [category, setCategory] = useState<CategoryFilter>("All");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOrder>("featured");
@@ -123,92 +125,92 @@ export default function App() {
       />
 
       <main aria-busy={isLoading}>
-        <Suspense
-          fallback={
-            <p className="px-4 py-24 text-center text-sm text-muted" role="status">
-              Loading…
-            </p>
-          }
-        >
-          <Routes>
-            <Route
-              element={
-                <>
-                  <Hero isLoading={isLoading} slides={slides} />
+        <Suspense fallback={<PageFallback />}>
+          {/* A new key on every page change makes the page fade in each time it appears. */}
+          <div
+            className="animate-page-in motion-reduce:animate-none"
+            key={location.pathname}
+          >
+            <Routes>
+              <Route
+                element={
+                  <>
+                    <Hero isLoading={isLoading} slides={slides} />
 
-                  <section
-                    className="mx-auto max-w-content px-4 pb-14 sm:px-6 lg:px-10"
-                    id="shop"
-                  >
-                    <div className="mb-6 flex items-end justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          The collection
-                        </p>
-                        <h2 className="mt-1 text-2xl font-extrabold tracking-tightest text-ink sm:text-3xl">
-                          Wear on repeat
-                        </h2>
-                      </div>
-                      {isLoading ? (
-                        <Skeleton className="mb-1 h-4 w-16" />
-                      ) : (
-                        <p className="pb-1 text-sm text-muted">
-                          {visibleProducts.length} pieces
-                        </p>
-                      )}
-                    </div>
-                    <FilterBar
-                      category={category}
-                      onCategoryChange={setCategory}
-                      onSearchChange={setSearch}
-                      onSortChange={setSort}
-                      search={search}
-                      sort={sort}
-                    />
-
-                    <div className="mt-8">
-                      {productsError ? (
-                        <div className="border-y border-border py-16 text-center" role="alert">
-                          <h3 className="text-lg font-semibold text-ink">
-                            We could not load the shop
-                          </h3>
-                          <p className="mt-2 text-sm text-muted">{productsError}</p>
-                          <button
-                            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface"
-                            onClick={() => void reload()}
-                            type="button"
-                          >
-                            Try again
-                          </button>
-                        </div>
-                      ) : !isLoading && products.length === 0 ? (
-                        <div className="border-y border-border py-16 text-center">
-                          <h3 className="text-lg font-semibold text-ink">
-                            New pieces are coming soon
-                          </h3>
-                          <p className="mt-2 text-sm text-muted">
-                            Check back shortly for our first collection.
+                    <section
+                      className="mx-auto max-w-content px-4 pb-14 sm:px-6 lg:px-10"
+                      id="shop"
+                    >
+                      <div className="mb-6 flex items-end justify-between gap-4">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                            The collection
                           </p>
+                          <h2 className="mt-1 text-2xl font-extrabold tracking-tightest text-ink sm:text-3xl">
+                            Wear on repeat
+                          </h2>
                         </div>
-                      ) : (
-                        <ProductGrid
-                          isLoading={isLoading}
-                          products={visibleProducts}
-                        />
-                      )}
-                    </div>
-                  </section>
-                </>
-              }
-              path="/"
-            />
-            <Route element={<ProductPage />} path="/product/:id" />
-            <Route element={<CheckoutPage />} path="/checkout" />
-            <Route element={<LoginPage />} path="/login" />
-            <Route element={<AdminPage />} path="/admin" />
-            <Route element={<OrderCompletePage />} path="/order-complete" />
-            <Route element={<Navigate replace to="/" />} path="*" />
-          </Routes>
+                        {isLoading ? (
+                          <Skeleton className="mb-1 h-4 w-16" />
+                        ) : (
+                          <p className="pb-1 text-sm text-muted">
+                            {visibleProducts.length} pieces
+                          </p>
+                        )}
+                      </div>
+                      <FilterBar
+                        category={category}
+                        onCategoryChange={setCategory}
+                        onSearchChange={setSearch}
+                        onSortChange={setSort}
+                        search={search}
+                        sort={sort}
+                      />
+
+                      <div className="mt-8">
+                        {productsError ? (
+                          <div className="border-y border-border py-16 text-center" role="alert">
+                            <h3 className="text-lg font-semibold text-ink">
+                              We could not load the shop
+                            </h3>
+                            <p className="mt-2 text-sm text-muted">{productsError}</p>
+                            <button
+                              className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface"
+                              onClick={() => void reload()}
+                              type="button"
+                            >
+                              Try again
+                            </button>
+                          </div>
+                        ) : !isLoading && products.length === 0 ? (
+                          <div className="border-y border-border py-16 text-center">
+                            <h3 className="text-lg font-semibold text-ink">
+                              New pieces are coming soon
+                            </h3>
+                            <p className="mt-2 text-sm text-muted">
+                              Check back shortly for our first collection.
+                            </p>
+                          </div>
+                        ) : (
+                          <ProductGrid
+                            isLoading={isLoading}
+                            products={visibleProducts}
+                          />
+                        )}
+                      </div>
+                    </section>
+                  </>
+                }
+                path="/"
+              />
+              <Route element={<ProductPage />} path="/product/:id" />
+              <Route element={<CheckoutPage />} path="/checkout" />
+              <Route element={<LoginPage />} path="/login" />
+              <Route element={<AdminPage />} path="/admin" />
+              <Route element={<OrderCompletePage />} path="/order-complete" />
+              <Route element={<Navigate replace to="/" />} path="*" />
+            </Routes>
+          </div>
         </Suspense>
       </main>
 

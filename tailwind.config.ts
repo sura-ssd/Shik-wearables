@@ -22,10 +22,22 @@ export default {
         progress: {
           from: { transform: "scaleX(0)" },
           to: { transform: "scaleX(0.85)" }
+        },
+        "page-in": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "none" }
+        },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" }
         }
       },
       animation: {
-        progress: "progress 2.5s ease-out forwards"
+        progress: "progress 2.5s ease-out forwards",
+        // "backwards" keeps the page free of leftover transforms once the animation ends.
+        "page-in": "page-in 0.35s ease-out backwards",
+        // Waits 150ms first, so quick page loads never flash the loading message.
+        "fade-in": "fade-in 0.2s ease-out 0.15s backwards"
       },
       letterSpacing: {
         tightest: "-0.045em"
