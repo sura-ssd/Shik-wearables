@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, ShoppingBag } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ColorSwatches } from "../components/ColorSwatches";
+import { ProductGallery } from "../components/ProductGallery";
 import { ProductGrid } from "../components/ProductGrid";
 import { SizePicker } from "../components/SizePicker";
-import { SmoothImage } from "../components/SmoothImage";
 import { useProducts } from "../hooks/useProducts";
 import { useCartStore } from "../store/cartStore";
 import { toCartColor } from "../utils/cartLine";
@@ -71,7 +71,6 @@ export function ProductPage() {
     product.colors.find((item) => item.sizes.length > 0) ??
     product.colors[0];
   const sizes = color ? color.sizes : product.sizes;
-  const image = color?.image ?? product.image;
 
   function handleColorChange(nextColorId: string) {
     setColorId(nextColorId);
@@ -95,21 +94,12 @@ export function ProductPage() {
       </Link>
 
       <div className="mt-4 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
-        <div className="relative aspect-[4/4.5] overflow-hidden rounded-[28px] bg-surface">
-          <SmoothImage
-            alt={color?.imageAlt ?? product.imageAlt}
-            className="size-full object-contain"
-            height="1125"
-            key={image}
-            src={image.replace("w=900", "w=1400")}
-            width="1000"
-          />
-          {product.badge && (
-            <span className="absolute left-4 top-4 rounded-full bg-canvas/95 px-3 py-1.5 text-xs font-semibold text-ink">
-              {product.badge}
-            </span>
-          )}
-        </div>
+        <ProductGallery
+          alt={color?.imageAlt ?? product.imageAlt}
+          badge={product.badge}
+          images={color ? color.images : [product.image]}
+          key={color?.id ?? "main"}
+        />
 
         <div className="lg:sticky lg:top-24 lg:self-start">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{product.category}</p>

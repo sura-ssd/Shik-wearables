@@ -5,8 +5,10 @@ export interface ProductColor {
   name: string;
   /** Swatch color, like #1f2937. */
   hex: string;
-  /** Photo of this color. Falls back to the product's main photo. */
+  /** Cover photo of this color. Falls back to the product's main photo. */
   image: string;
+  /** Every photo of this color, cover first. Always has at least one. */
+  images: string[];
   imageAlt: string;
   /** Sizes of this color that are in stock. Empty means this color is sold out. */
   sizes: string[];

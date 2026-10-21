@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
 import { Plus, X } from "lucide-react";
 import {
   MAX_IMAGE_BYTES,
+  MAX_PHOTOS_PER_COLOR,
   createProduct,
   fetchAdminProducts,
   setProductActive,
@@ -118,7 +119,7 @@ interface ColorRow {
   id: string;
   name: string;
   hex: string;
-  file: File | null;
+  files: File[];
 }
 
 const stockKey = (colorId: string | null, sizeId: string) => `${colorId ?? "none"}|${sizeId}`;
@@ -153,7 +154,7 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
   const addColor = (preset?: { name: string; hex: string }) =>
     setColors((current) => {
       if (preset && current.some((row) => row.name.toLowerCase() === preset.name.toLowerCase())) return current;
-      return [...current, { id: newId(), name: preset?.name ?? "", hex: preset?.hex ?? "#111111", file: null }];
+      return [...current, { id: newId(), name: preset?.name ?? "", hex: preset?.hex ?? "#111111", files: [] }];
     });
 
   async function handleSubmit(event: FormEvent) {
@@ -166,8 +167,7 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
     if (!Number.isInteger(priceEtb) || priceEtb <= 0) return setError("Enter the price in whole birr, like 2500.");
     if (!image) return setError("Choose the main product photo.");
 
-    for (const file of [image, ...colors.map((color) => color.file)]) {
-      if (!file) continue;
+    for (const file of [image, ...colors.flatMap((color) => color.files)]) {
       if (!IMAGE_TYPES.includes(file.type)) return setError("Use JPG, PNG or WebP photos.");
       if (file.size > MAX_IMAGE_BYTES) return setError("Each photo must be under 20 MB.");
     }
@@ -203,7 +203,7 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
         badge,
         imageAlt,
         image,
-        colors: colors.map((color) => ({ name: color.name, hex: color.hex, image: color.file })),
+        colors: colors.map((color) => ({ name: color.name, hex: color.hex, images: color.files })),
         variants,
       });
       setSuccess(`"${name.trim()}" is now in the shop.`);
@@ -254,7 +254,7 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
 
       <fieldset className="min-w-0">
         <legend className="mb-1 text-sm font-semibold text-ink">Colors <span className="font-normal text-muted">(optional)</span></legend>
-        <p className="mb-3 text-xs text-muted">Skip this if the product comes in one color. Each color can have its own photo, shown when a customer picks it.</p>
+        <p className="mb-3 text-xs text-muted">Skip this if the product comes in one color. Each color can have up to {MAX_PHOTOS_PER_COLOR} photos, shown as a gallery when a customer picks it.</p>
         <div className="mb-3 flex flex-wrap gap-2">
           {COLOR_PRESETS.map((preset) => (
             <button className={`${smallButton} gap-2`} key={preset.name} onClick={() => addColor(preset)} type="button">
@@ -274,10 +274,11 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
                   <X aria-hidden="true" size={16} />
                 </button>
               </div>
-              <label className="mt-3 block text-xs font-semibold text-muted">
-                Photo of this color (optional)
-                <input accept="image/jpeg,image/png,image/webp" className={`${fileClass} mt-1`} onChange={(event) => updateColor(color.id, { file: event.target.files?.[0] ?? null })} type="file" />
-              </label>
+              <PhotoPicker
+                files={color.files}
+                max={MAX_PHOTOS_PER_COLOR}
+                onChange={(files) => updateColor(color.id, { files })}
+              />
             </li>
           ))}
         </ul>
@@ -349,6 +350,72 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
   );
 }
 
+/** Choose several photos for one color. The first photo is the cover. */
+function PhotoPicker({ files, max, onChange }: { files: File[]; max: number; onChange: (files: File[]) => void }) {
+  const [urls, setUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    const next = files.map((file) => URL.createObjectURL(file));
+    setUrls(next);
+    return () => next.forEach((url) => URL.revokeObjectURL(url));
+  }, [files]);
+
+  function handleChoose(event: ChangeEvent<HTMLInputElement>) {
+    const chosen = Array.from(event.target.files ?? []);
+    event.target.value = ""; // lets the same photo be chosen again later
+    if (chosen.length > 0) onChange([...files, ...chosen].slice(0, max));
+  }
+
+  function makeCover(index: number) {
+    onChange([files[index], ...files.filter((_, fileIndex) => fileIndex !== index)]);
+  }
+
+  return (
+    <div className="mt-3">
+      <label className="block text-xs font-semibold text-muted">
+        Photos of this color (optional, up to {max})
+        <input
+          accept="image/jpeg,image/png,image/webp"
+          className={`${fileClass} mt-1 disabled:opacity-50`}
+          disabled={files.length >= max}
+          multiple
+          onChange={handleChoose}
+          type="file"
+        />
+      </label>
+      {files.length > 0 && (
+        <>
+          <ul className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-2">
+            {files.map((file, index) => (
+              <li className="min-w-0" key={`${file.name}-${file.size}-${index}`}>
+                <div className="relative aspect-square overflow-hidden rounded-xl border border-border bg-surface">
+                  {urls[index] && <img alt={`Photo ${index + 1}: ${file.name}`} className="size-full object-contain" src={urls[index]} />}
+                  <button
+                    aria-label={`Remove photo ${index + 1}`}
+                    className="absolute right-1 top-1 inline-flex size-6 items-center justify-center rounded-full bg-canvas/95 text-ink hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                    onClick={() => onChange(files.filter((_, fileIndex) => fileIndex !== index))}
+                    type="button"
+                  >
+                    <X aria-hidden="true" size={12} />
+                  </button>
+                </div>
+                {index === 0 ? (
+                  <p className="mt-1 text-center text-[11px] font-semibold text-ink">Cover</p>
+                ) : (
+                  <button className="mt-1 w-full text-center text-[11px] font-semibold text-accent underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent" onClick={() => makeCover(index)} type="button">
+                    Make cover
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-muted">The cover photo appears on the shop page and in the cart.</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function AdminProductRow({ product, onChanged }: { product: AdminProduct; onChanged: () => Promise<void> }) {
   const [stocks, setStocks] = useState<Record<string, string>>(() =>
     Object.fromEntries(product.variants.map((variant) => [variant.id, String(variant.stock)])),
@@ -409,6 +476,9 @@ function AdminProductRow({ product, onChanged }: { product: AdminProduct; onChan
               <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-ink">
                 <span aria-hidden="true" className="size-3 rounded-full border border-border" style={{ backgroundColor: group.color.hex }} />
                 {group.color.name}
+                <span className="font-normal text-muted">
+                  · {group.color.imageUrls.length} {group.color.imageUrls.length === 1 ? "photo" : "photos"}
+                </span>
               </p>
             )}
             <div className="grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-3">

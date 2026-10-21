@@ -6,6 +6,8 @@ import type { ProductCategory } from "../types";
 const IMAGE_BUCKET = "product-images";
 // Largest photo someone may choose. It is shrunk before upload.
 export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+// Photos allowed for each color.
+export const MAX_PHOTOS_PER_COLOR = 6;
 // Storage limit for the optimized photo (set in the storage migration).
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
@@ -13,7 +15,7 @@ export interface AdminColor {
   id: string;
   name: string;
   hex: string;
-  imageUrl: string | null;
+  imageUrls: string[];
 }
 
 export interface AdminVariant {
@@ -37,8 +39,8 @@ export interface AdminProduct {
 export interface NewColorInput {
   name: string;
   hex: string;
-  /** Photo of this color. Optional: the main photo is used when missing. */
-  image: File | null;
+  /** Photos of this color, cover first. Optional: the main photo is used when there are none. */
+  images: File[];
 }
 
 export interface NewVariantInput {
@@ -66,7 +68,7 @@ interface AdminProductRow {
   price_etb: number;
   image_url: string;
   active: boolean;
-  product_colors: { id: string; name: string; hex: string; image_url: string | null; sort_order: number }[] | null;
+  product_colors: { id: string; name: string; hex: string; image_urls: string[] | null; sort_order: number }[] | null;
   variants: { id: string; color_id: string | null; size: string; stock: number }[] | null;
 }
 
@@ -91,7 +93,7 @@ export async function fetchAdminProducts(): Promise<AdminProduct[]> {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, category, price_etb, image_url, active, product_colors(id, name, hex, image_url, sort_order), variants(id, color_id, size, stock)",
+      "id, name, category, price_etb, image_url, active, product_colors(id, name, hex, image_urls, sort_order), variants(id, color_id, size, stock)",
     )
     .order("created_at", { ascending: false });
 
@@ -106,7 +108,7 @@ export async function fetchAdminProducts(): Promise<AdminProduct[]> {
     active: row.active,
     colors: [...(row.product_colors ?? [])]
       .sort((left, right) => left.sort_order - right.sort_order)
-      .map((color) => ({ id: color.id, name: color.name, hex: color.hex, imageUrl: color.image_url })),
+      .map((color) => ({ id: color.id, name: color.name, hex: color.hex, imageUrls: color.image_urls ?? [] })),
     variants: [...(row.variants ?? [])]
       .sort((left, right) => compareSizes(left.size, right.size))
       .map((variant) => ({
@@ -178,17 +180,18 @@ export async function createProduct(input: NewProductInput): Promise<string> {
     if (input.colors.length > 0) {
       const colorRows = [];
       for (const [index, color] of input.colors.entries()) {
-        let imageUrl: string | null = null;
-        if (color.image) {
-          const photo = await uploadPhoto(color.image, `${baseId}/colors`);
+        const imageUrls: string[] = [];
+        for (const file of color.images.slice(0, MAX_PHOTOS_PER_COLOR)) {
+          const photo = await uploadPhoto(file, `${baseId}/colors`);
           uploadedPaths.push(photo.path);
-          imageUrl = photo.url;
+          imageUrls.push(photo.url);
         }
         colorRows.push({
           product_id: productId,
           name: color.name.trim(),
           hex: color.hex.toLowerCase(),
-          image_url: imageUrl,
+          image_url: imageUrls[0] ?? null,
+          image_urls: imageUrls,
           image_alt: `${name}, ${color.name.trim()}`,
           sort_order: index,
         });

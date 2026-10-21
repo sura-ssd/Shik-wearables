@@ -6,6 +6,7 @@ interface ColorRow {
   name: string;
   hex: string;
   image_url: string | null;
+  image_urls: string[] | null;
   image_alt: string | null;
   sort_order: number;
 }
@@ -47,17 +48,24 @@ function toProduct(row: ProductRow): Product {
 
   const colors: ProductColor[] = [...(row.product_colors ?? [])]
     .sort((left, right) => left.sort_order - right.sort_order)
-    .map((color) => ({
-      id: color.id,
-      name: color.name,
-      hex: color.hex,
-      image: color.image_url ?? row.image_url,
-      imageAlt: color.image_alt || `${row.name}, ${color.name}`,
-      sizes: inStock
-        .filter((variant) => variant.color_id === color.id)
-        .map((variant) => variant.size)
-        .sort(compareSizes),
-    }));
+    .map((color) => {
+      // A color without its own photos shows the product's main photo.
+      const own = color.image_urls?.length ? color.image_urls : color.image_url ? [color.image_url] : [];
+      const images = own.length > 0 ? own : [row.image_url];
+
+      return {
+        id: color.id,
+        name: color.name,
+        hex: color.hex,
+        image: images[0],
+        images,
+        imageAlt: color.image_alt || `${row.name}, ${color.name}`,
+        sizes: inStock
+          .filter((variant) => variant.color_id === color.id)
+          .map((variant) => variant.size)
+          .sort(compareSizes),
+      };
+    });
 
   // Only sizes that are in stock can be chosen. An empty list means "sold out".
   const sizes =
@@ -86,7 +94,7 @@ export async function fetchProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, category, price_etb, image_url, image_alt, badge, product_colors(id, name, hex, image_url, image_alt, sort_order), variants(color_id, size, stock)",
+      "id, name, category, price_etb, image_url, image_alt, badge, product_colors(id, name, hex, image_url, image_urls, image_alt, sort_order), variants(color_id, size, stock)",
     )
     .eq("active", true)
     .order("created_at", { ascending: false });
