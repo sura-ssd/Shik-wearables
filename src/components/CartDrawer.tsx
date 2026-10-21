@@ -3,6 +3,7 @@ import { ArrowRight, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCartStore } from "../store/cartStore";
 import { formatPrice } from "../utils/formatPrice";
+import { toast } from "../store/toastStore";
 import { cartLineKey } from "../utils/cartLine";
 import { CartItem } from "./CartItem";
 
@@ -95,7 +96,10 @@ export function CartDrawer() {
                   item={item}
                   key={cartLineKey(item)}
                   onQuantityChange={(quantity) => setQuantity(item.product.id, item.size, quantity, item.color?.id)}
-                  onRemove={() => removeItem(item.product.id, item.size, item.color?.id)}
+                  onRemove={() => {
+                    removeItem(item.product.id, item.size, item.color?.id);
+                    toast.info("Removed from cart", item.product.name);
+                  }}
                 />
               ))}
             </ul>

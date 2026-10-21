@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
 import { useCartStore } from "../store/cartStore";
+import { toast } from "../store/toastStore";
 
 type Result = "checking" | "paid" | "failed" | "signin";
 
@@ -38,8 +39,10 @@ export function OrderCompletePage() {
         if (!error && data?.status === "paid") {
           clearCart();
           setResult("paid");
+          toast.success("Payment confirmed", "Thank you for your order.");
         } else {
           setResult("failed");
+          toast.error("Payment not confirmed", "We could not confirm your payment yet.");
         }
       });
 

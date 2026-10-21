@@ -12,6 +12,7 @@ import {
 } from "../lib/adminProducts";
 import { useAuthStore } from "../store/authStore";
 import { useProductStore } from "../store/productStore";
+import { toast } from "../store/toastStore";
 import type { ProductCategory } from "../types";
 import { formatPrice } from "../utils/formatPrice";
 
@@ -137,7 +138,6 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
   const [stock, setStock] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!image) return setPreview(null);
@@ -160,7 +160,6 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    setSuccess(null);
 
     const priceEtb = Number(price);
     if (name.trim().length < 2) return setError("Enter the product name.");
@@ -206,12 +205,12 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
         colors: colors.map((color) => ({ name: color.name, hex: color.hex, images: color.files })),
         variants,
       });
-      setSuccess(`"${name.trim()}" is now in the shop.`);
+      toast.success("Product posted", `"${name.trim()}" is now in the shop.`);
       setName(""); setPrice(""); setBadge(""); setImageAlt(""); setImage(null);
       setColors([]); setSizes([]); setStock({});
       await onCreated();
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Could not post the product.");
+      toast.error("Couldn't post the product", createError instanceof Error ? createError.message : "Please try again.");
     } finally {
       setBusy(false);
     }
@@ -341,7 +340,6 @@ function NewProductForm({ onCreated }: { onCreated: () => Promise<void> }) {
       )}
 
       {error && <p className="text-sm text-danger" role="alert">{error}</p>}
-      {success && <p className="text-sm text-ink" role="status">{success}</p>}
 
       <button className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-6 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:bg-border disabled:text-muted" disabled={busy} type="submit">
         {busy ? "Posting…" : "Post product"}
@@ -421,7 +419,6 @@ function AdminProductRow({ product, onChanged }: { product: AdminProduct; onChan
     Object.fromEntries(product.variants.map((variant) => [variant.id, String(variant.stock)])),
   );
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   // One group per color, or a single group when the product has no colors.
   const groups =
@@ -435,13 +432,12 @@ function AdminProductRow({ product, onChanged }: { product: AdminProduct; onChan
 
   async function run(action: () => Promise<void>, done: string) {
     setBusy(true);
-    setMessage(null);
     try {
       await action();
       await onChanged();
-      setMessage(done);
+      toast.success(done, product.name);
     } catch (actionError) {
-      setMessage(actionError instanceof Error ? actionError.message : "Something went wrong.");
+      toast.error("Couldn't update the product", actionError instanceof Error ? actionError.message : "Something went wrong.");
     } finally {
       setBusy(false);
     }
@@ -449,8 +445,8 @@ function AdminProductRow({ product, onChanged }: { product: AdminProduct; onChan
 
   function saveStock() {
     const changes = product.variants.filter((variant) => stocks[variant.id] !== String(variant.stock));
-    if (changes.some((variant) => !/^\d+$/.test(stocks[variant.id]))) return setMessage("Stock must be a whole number, 0 or more.");
-    if (changes.length === 0) return setMessage("No changes to save.");
+    if (changes.some((variant) => !/^\d+$/.test(stocks[variant.id]))) return toast.error("Check the stock numbers", "Stock must be a whole number, 0 or more.");
+    if (changes.length === 0) return toast.info("Nothing to save", "You have not changed any stock numbers.");
     void run(async () => {
       await Promise.all(changes.map((variant) => updateStock(variant.id, Number(stocks[variant.id]))));
     }, "Stock saved.");
@@ -494,7 +490,6 @@ function AdminProductRow({ product, onChanged }: { product: AdminProduct; onChan
       </div>
       <div className="mt-3 flex items-center gap-3">
         <button className={smallButton} disabled={busy} onClick={saveStock} type="button">Save stock</button>
-        {message && <p className="text-xs text-muted" role="status">{message}</p>}
       </div>
     </li>
   );

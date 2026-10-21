@@ -30,6 +30,10 @@ export default {
         "fade-in": {
           from: { opacity: "0" },
           to: { opacity: "1" }
+        },
+        "toast-in": {
+          from: { opacity: "0", transform: "translateY(12px) scale(0.98)" },
+          to: { opacity: "1", transform: "none" }
         }
       },
       animation: {
@@ -37,7 +41,8 @@ export default {
         // "backwards" keeps the page free of leftover transforms once the animation ends.
         "page-in": "page-in 0.35s ease-out backwards",
         // Waits 150ms first, so quick page loads never flash the loading message.
-        "fade-in": "fade-in 0.2s ease-out 0.15s backwards"
+        "fade-in": "fade-in 0.2s ease-out 0.15s backwards",
+        "toast-in": "toast-in 0.25s ease-out backwards"
       },
       letterSpacing: {
         tightest: "-0.045em"

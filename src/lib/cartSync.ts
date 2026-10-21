@@ -1,5 +1,6 @@
 import { useCartStore } from "../store/cartStore";
 import { useProductStore } from "../store/productStore";
+import { toast } from "../store/toastStore";
 import type { CartLine, Product } from "../types";
 import { cartLineKey, toCartColor } from "../utils/cartLine";
 import { supabase } from "./supabase";
@@ -133,15 +134,20 @@ export async function reconcileCart(userId: string | null): Promise<void> {
       userId,
       removed > 0 ? "Some items in your saved cart are no longer available and were removed." : null,
     );
+
+    if (removed > 0) toast.info("Cart updated", "Some saved items are no longer available and were removed.");
+    else if (lines.length > 0) toast.success("Welcome back", "Your saved cart has been restored.");
   } catch (error) {
     console.error("Could not restore the saved cart", error);
     useCartStore.setState({ notice: "We could not restore your saved cart. Please refresh the page." });
+    toast.error("Couldn't restore your cart", "Please refresh the page and try again.");
   } finally {
     useCartStore.getState().setRestoring(false);
   }
 }
 
 let timer: number | undefined;
+let lastSaveErrorAt = 0;
 let pending: { userId: string; items: CartLine[] } | null = null;
 
 async function writePending(): Promise<void> {
@@ -152,6 +158,11 @@ async function writePending(): Promise<void> {
     await writeSavedCart(job.userId, job.items);
   } catch (error) {
     console.error("Could not save the cart", error);
+    // At most one message a minute, so a bad connection does not flood the screen.
+    if (Date.now() - lastSaveErrorAt > 60_000) {
+      lastSaveErrorAt = Date.now();
+      toast.error("Couldn't save your cart", "Your changes may be lost if you sign out.");
+    }
   }
 }
 

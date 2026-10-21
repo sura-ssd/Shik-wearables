@@ -8,6 +8,7 @@ import { z } from "zod";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
 import { useCartStore } from "../store/cartStore";
+import { toast } from "../store/toastStore";
 import { cartLineKey } from "../utils/cartLine";
 import { formatPrice } from "../utils/formatPrice";
 
@@ -109,9 +110,12 @@ export function CheckoutPage() {
         throw new Error("Your order is saved, but we could not start the payment. Please try again.");
       }
 
+      toast.info("Order placed", "Taking you to Chapa to pay…");
       window.location.assign(payment.checkoutUrl);
     } catch (error) {
-      setPaymentError(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+      const message = error instanceof Error ? error.message : "Something went wrong. Please try again.";
+      setPaymentError(message);
+      toast.error("Couldn't start your payment", message);
       setIsPaying(false);
     }
   }

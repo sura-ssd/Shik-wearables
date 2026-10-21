@@ -2,6 +2,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { create } from "zustand";
 import { flushCartSync, reconcileCart } from "../lib/cartSync";
 import { supabase } from "../lib/supabase";
+import { toast } from "./toastStore";
 
 type Role = "customer" | "admin";
 
@@ -59,6 +60,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     // Save the latest cart changes online first, then sign out.
     await flushCartSync();
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) toast.error("Couldn't sign out", error.message);
+    else toast.success("Signed out", "Your cart stays saved to your account.");
   },
 }));

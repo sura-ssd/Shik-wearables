@@ -3,6 +3,7 @@ import { Check, Eye, EyeOff, X } from "lucide-react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
+import { toast } from "../store/toastStore";
 import { checkPassword } from "../utils/passwordStrength";
 
 const inputClass =
@@ -69,15 +70,22 @@ export function LoginPage() {
         email: email.trim(),
         password,
       });
-      if (signInError) setError(signInError.message);
+      if (signInError) toast.error("Couldn't sign in", signInError.message);
+      else toast.success("Signed in", "Welcome back to Shik.");
     } else {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: { data: { full_name: fullName.trim() } },
       });
-      if (signUpError) setError(signUpError.message);
-      else if (!data.session) setNotice("Account created. Check your email to confirm it, then sign in.");
+      if (signUpError) {
+        toast.error("Couldn't create your account", signUpError.message);
+      } else if (!data.session) {
+        setNotice("Account created. Check your email to confirm it, then sign in.");
+        toast.success("Account created", "Check your email to confirm it, then sign in.");
+      } else {
+        toast.success("Account created", "Welcome to Shik.");
+      }
     }
     setBusy(false);
   }

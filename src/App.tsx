@@ -10,6 +10,7 @@ import { Hero } from "./components/Hero";
 import { PageFallback } from "./components/PageFallback";
 import { ProductGrid } from "./components/ProductGrid";
 import { Skeleton } from "./components/Skeleton";
+import { Toaster } from "./components/Toaster";
 import { TopLoader } from "./components/TopLoader";
 import { buildHeroSlides } from "./data/heroSlides";
 import { useProducts } from "./hooks/useProducts";
@@ -247,6 +248,7 @@ export default function App() {
       </footer>
 
       <CartDrawer />
+      <Toaster />
     </div>
   );
 }
