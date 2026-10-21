@@ -16,13 +16,25 @@ interface AuthState {
 }
 
 let latestRun = 0;
+// True while the person pressed "Sign out" themselves, so we can tell that apart from a session that ended.
+let signingOutByChoice = false;
+
+function announceSignOut() {
+  if (signingOutByChoice) {
+    signingOutByChoice = false;
+    toast.success("Signed out", "Your cart stays saved to your account.");
+  } else {
+    // The session ended on its own: it expired, or the person signed out in another tab or device.
+    toast.info("You've been signed out", "Your session ended. Sign in again to continue.");
+  }
+}
 
 async function fetchRole(userId: string): Promise<Role> {
   const { data } = await supabase.from("profiles").select("role").eq("user_id", userId).maybeSingle();
   return data?.role === "admin" ? "admin" : "customer";
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   role: null,
   isLoading: true,
@@ -33,9 +45,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       const run = ++latestRun;
 
       if (!session) {
+        const wasSignedIn = get().user !== null;
+
         // Signed out: a signed-in cart is cleared from this device (it stays saved online).
         await reconcileCart(null);
-        if (active && run === latestRun) set({ user: null, role: null, isLoading: false });
+        if (active && run === latestRun) {
+          set({ user: null, role: null, isLoading: false });
+          // Tell the person, however they ended up signed out.
+          if (wasSignedIn) announceSignOut();
+        }
         return;
       }
 
@@ -60,8 +78,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     // Save the latest cart changes online first, then sign out.
     await flushCartSync();
+    signingOutByChoice = true;
     const { error } = await supabase.auth.signOut();
-    if (error) toast.error("Couldn't sign out", error.message);
-    else toast.success("Signed out", "Your cart stays saved to your account.");
+    if (error) {
+      signingOutByChoice = false;
+      toast.error("Couldn't sign out", error.message);
+    }
   },
 }));
