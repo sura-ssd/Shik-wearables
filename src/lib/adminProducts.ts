@@ -95,6 +95,7 @@ export async function fetchAdminProducts(): Promise<AdminProduct[]> {
     .select(
       "id, name, category, price_etb, image_url, active, product_colors(id, name, hex, image_urls, sort_order), variants(id, color_id, size, stock)",
     )
+    .is("archived_at", null)
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -230,6 +231,33 @@ export async function createProduct(input: NewProductInput): Promise<string> {
 export async function updateStock(variantId: string, stock: number): Promise<void> {
   const { error } = await supabase.from("variants").update({ stock }).eq("id", variantId);
   if (error) throw new Error(error.message);
+}
+
+/** Works out where a photo lives in storage from its public address. Photos from elsewhere return null. */
+function storagePathFromUrl(url: string): string | null {
+  const marker = `/${IMAGE_BUCKET}/`;
+  const index = url.indexOf(marker);
+  return url.includes("/storage/v1/object/") && index !== -1 ? decodeURIComponent(url.slice(index + marker.length)) : null;
+}
+
+/**
+ * Deletes a product. If customers already ordered it, it cannot be erased from the order history,
+ * so it is archived instead (removed from the shop and from this list).
+ */
+export async function deleteProduct(product: AdminProduct): Promise<"deleted" | "archived"> {
+  const { data, error } = await supabase.rpc("delete_product", { p_product_id: product.id });
+  if (error) throw new Error(error.message);
+
+  const outcome = data === "archived" ? "archived" : "deleted";
+
+  // A fully deleted product no longer needs its photos.
+  if (outcome === "deleted") {
+    const paths = [product.imageUrl, ...product.colors.flatMap((color) => color.imageUrls)]
+      .map(storagePathFromUrl)
+      .filter((path): path is string => path !== null);
+    if (paths.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(paths);
+  }
+  return outcome;
 }
 
 export async function setProductActive(productId: string, active: boolean): Promise<void> {

@@ -5,6 +5,7 @@ import {
   MAX_IMAGE_BYTES,
   MAX_PHOTOS_PER_COLOR,
   createProduct,
+  deleteProduct,
   fetchAdminProducts,
   setProductActive,
   updateStock,
@@ -421,6 +422,7 @@ function AdminProductRow({ product, onChanged }: { product: AdminProduct; onChan
     Object.fromEntries(product.variants.map((variant) => [variant.id, String(variant.stock)])),
   );
   const [busy, setBusy] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // One group per color, or a single group when the product has no colors.
   const groups =
@@ -445,6 +447,21 @@ function AdminProductRow({ product, onChanged }: { product: AdminProduct; onChan
     }
   }
 
+  async function handleDelete() {
+    setBusy(true);
+    try {
+      const outcome = await deleteProduct(product);
+      if (outcome === "deleted") toast.success("Product deleted", product.name);
+      else toast.success("Product removed from the shop", `${product.name} stays in past orders.`);
+      await onChanged();
+    } catch (deleteError) {
+      toast.error("Couldn't delete the product", deleteError instanceof Error ? deleteError.message : "Something went wrong.");
+    } finally {
+      setBusy(false);
+      setConfirmingDelete(false);
+    }
+  }
+
   function saveStock() {
     const changes = product.variants.filter((variant) => stocks[variant.id] !== String(variant.stock));
     if (changes.some((variant) => !/^\d+$/.test(stocks[variant.id]))) return toast.error("Check the stock numbers", "Stock must be a whole number, 0 or more.");
@@ -461,11 +478,31 @@ function AdminProductRow({ product, onChanged }: { product: AdminProduct; onChan
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-ink">{product.name}</p>
           <p className="mt-1 text-xs text-muted">{product.category} · {formatPrice(product.priceEtb)} · {product.active ? "Visible in shop" : "Hidden"}</p>
-          <button className={`${smallButton} mt-3`} disabled={busy} onClick={() => void run(() => setProductActive(product.id, !product.active), product.active ? "Hidden from the shop." : "Visible in the shop.")} type="button">
-            {product.active ? "Hide from shop" : "Show in shop"}
-          </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button className={smallButton} disabled={busy} onClick={() => void run(() => setProductActive(product.id, !product.active), product.active ? "Hidden from the shop." : "Visible in the shop.")} type="button">
+              {product.active ? "Hide from shop" : "Show in shop"}
+            </button>
+            <button className={`${smallButton} hover:!border-danger hover:!text-danger`} disabled={busy} onClick={() => setConfirmingDelete(true)} type="button">
+              Delete
+            </button>
+          </div>
         </div>
       </div>
+
+      {confirmingDelete && (
+        <div aria-label={`Delete ${product.name}`} className="mt-4 rounded-xl border border-danger/40 bg-danger/10 p-4" role="group">
+          <p className="text-sm font-semibold text-ink">Delete “{product.name}”?</p>
+          <p className="mt-1 text-xs leading-5 text-muted">
+            This cannot be undone. If customers have already ordered it, it is removed from the shop but kept in their order history.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button className="inline-flex min-h-10 items-center justify-center rounded-full bg-danger px-5 text-sm font-semibold text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60" disabled={busy} onClick={() => void handleDelete()} type="button">
+              {busy ? "Deleting…" : "Yes, delete"}
+            </button>
+            <button className={smallButton} disabled={busy} onClick={() => setConfirmingDelete(false)} type="button">Keep it</button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 space-y-4">
         {groups.map((group) => (
