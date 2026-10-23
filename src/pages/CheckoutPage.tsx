@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { UseFormRegister } from "react-hook-form";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { ArrowLeft, ArrowRight, Banknote, MapPin } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { Dropdown } from "../components/Dropdown";
 import { placeOrder } from "../lib/orders";
 import { useAuthStore } from "../store/authStore";
 import { useCartStore } from "../store/cartStore";
@@ -51,6 +52,7 @@ export function CheckoutPage() {
   const authLoading = useAuthStore((state) => state.isLoading);
   const subtotal = items.reduce((total, item) => total + item.product.price * item.quantity, 0);
   const {
+    control,
     formState: { errors },
     handleSubmit,
     register,
@@ -165,17 +167,25 @@ export function CheckoutPage() {
 
                 <div className="sm:col-span-2">
                   <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="subCity">Sub-city</label>
-                  <select
-                    aria-describedby={errors.subCity ? "subCity-error" : undefined}
-                    aria-invalid={Boolean(errors.subCity)}
-                    autoComplete="address-level3"
-                    className={inputClass}
-                    id="subCity"
-                    {...register("subCity")}
-                  >
-                    <option value="">Choose your sub-city</option>
-                    {SUB_CITIES.map((subCity) => <option key={subCity}>{subCity}</option>)}
-                  </select>
+                  <Controller
+                    control={control}
+                    name="subCity"
+                    render={({ field }) => (
+                      <Dropdown
+                        ariaLabel="Sub-city"
+                        describedBy={errors.subCity ? "subCity-error" : undefined}
+                        id="subCity"
+                        invalid={Boolean(errors.subCity)}
+                        large
+                        onChange={field.onChange}
+                        options={[
+                          { value: "", label: "Choose your sub-city" },
+                          ...SUB_CITIES.map((subCity) => ({ value: subCity, label: subCity })),
+                        ]}
+                        value={field.value}
+                      />
+                    )}
+                  />
                   {errors.subCity?.message && <p className="mt-1.5 text-sm text-danger" id="subCity-error">{errors.subCity.message}</p>}
                 </div>
 

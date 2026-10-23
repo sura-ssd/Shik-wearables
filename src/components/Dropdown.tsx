@@ -9,6 +9,13 @@ export interface DropdownOption {
 interface DropdownProps {
   ariaLabel: string;
   className?: string;
+  /** Id for the button, so a <label htmlFor> can point to it. */
+  id?: string;
+  /** Id of the text that describes the field, such as an error message. */
+  describedBy?: string;
+  invalid?: boolean;
+  /** A taller button, to sit beside text inputs in a form. */
+  large?: boolean;
   onChange: (value: string) => void;
   options: DropdownOption[];
   value: string;
@@ -17,6 +24,10 @@ interface DropdownProps {
 export function Dropdown({
   ariaLabel,
   className = "",
+  describedBy,
+  id,
+  invalid = false,
+  large = false,
   onChange,
   options,
   value,
@@ -42,6 +53,13 @@ export function Dropdown({
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, []);
+
+  // Keep the highlighted option in view when the list is long and scrolls.
+  useEffect(() => {
+    if (isOpen) {
+      document.getElementById(`${listboxId}-option-${activeIndex}`)?.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeIndex, isOpen, listboxId]);
 
   function chooseOption(option: DropdownOption) {
     onChange(option.value);
@@ -87,10 +105,13 @@ export function Dropdown({
       <button
         aria-activedescendant={isOpen ? `${listboxId}-option-${activeIndex}` : undefined}
         aria-controls={listboxId}
+        aria-describedby={describedBy}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
+        aria-invalid={invalid || undefined}
         aria-label={ariaLabel}
-        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-full border border-border bg-surface px-4 text-left text-sm font-medium text-ink transition-colors hover:border-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className={`flex ${large ? "min-h-12" : "min-h-11"} w-full items-center justify-between gap-3 rounded-full border border-border bg-surface px-4 text-left text-sm font-medium text-ink transition-colors hover:border-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`}
+        id={id}
         onClick={toggleMenu}
         onKeyDown={handleKeyDown}
         ref={triggerRef}
@@ -106,7 +127,7 @@ export function Dropdown({
 
       <div
         aria-hidden={!isOpen}
-        className={`absolute left-0 top-[calc(100%+8px)] z-40 w-full min-w-max origin-top rounded-2xl border border-border bg-surface p-1.5 shadow-xl transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none ${isOpen ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none -translate-y-1 scale-[0.98] opacity-0"}`}
+        className={`absolute left-0 top-[calc(100%+8px)] z-40 max-h-64 w-full min-w-max origin-top overflow-y-auto rounded-2xl border border-border bg-surface p-1.5 shadow-xl transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none ${isOpen ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none -translate-y-1 scale-[0.98] opacity-0"}`}
         id={listboxId}
         role="listbox"
       >
@@ -134,4 +155,4 @@ export function Dropdown({
       </div>
     </div>
   );
-}
+}
