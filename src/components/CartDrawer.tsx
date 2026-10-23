@@ -108,13 +108,13 @@ export function CartDrawer() {
                 <span className="text-muted">Subtotal</span>
                 <span className="font-semibold text-ink">{formatPrice(subtotal)}</span>
               </div>
-              <p className="mt-2 text-xs leading-5 text-muted">Delivery options and fees are confirmed during checkout.</p>
+              <p className="mt-2 text-xs leading-5 text-muted">Free delivery in Addis Ababa. You pay in cash when your order arrives.</p>
               <Link
                 className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 onClick={closeCart}
                 to="/checkout"
               >
-                Checkout <ArrowRight aria-hidden="true" size={17} />
+                Place order <ArrowRight aria-hidden="true" size={17} />
               </Link>
             </div>
           </>

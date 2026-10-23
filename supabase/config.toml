@@ -1,5 +1,0 @@
-[functions.verify-chapa-payment]
-verify_jwt = true
-
-[functions.initialize-chapa-payment]
-verify_jwt = true

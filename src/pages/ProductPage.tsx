@@ -154,8 +154,8 @@ export function ProductPage() {
               </div>
             )}
             <div className="flex justify-between gap-4 py-3">
-              <dt className="text-muted">Delivery and returns</dt>
-              <dd className="font-medium text-ink">Confirmed at checkout</dd>
+              <dt className="text-muted">Delivery</dt>
+              <dd className="text-right font-medium text-ink">Free in Addis Ababa, pay cash on delivery</dd>
             </div>
           </dl>
         </div>

@@ -2,19 +2,20 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { UseFormRegister } from "react-hook-form";
 import { useForm } from "react-hook-form";
-import { ArrowLeft, ArrowRight, MapPin, ShieldCheck } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Banknote, MapPin } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { supabase } from "../lib/supabase";
+import { placeOrder } from "../lib/orders";
 import { useAuthStore } from "../store/authStore";
 import { useCartStore } from "../store/cartStore";
 import { toast } from "../store/toastStore";
+import { SUB_CITIES } from "../utils/addis";
 import { cartLineKey } from "../utils/cartLine";
 import { formatPrice } from "../utils/formatPrice";
 
 const ethiopianPhonePattern = /^(?:(?:\+251|251)(?:9|7)\d{8}|0(?:9|7)\d{8})$/;
 
-const checkoutSchema = z.object({
+const orderSchema = z.object({
   fullName: z.string().trim().min(2, "Enter your full name."),
   phone: z
     .string()
@@ -23,100 +24,62 @@ const checkoutSchema = z.object({
       (value) => ethiopianPhonePattern.test(value.replace(/[\s()-]/g, "")),
       "Enter a valid Ethiopian mobile number.",
     ),
-  city: z.string().trim().min(2, "Enter your city or area."),
+  subCity: z
+    .string()
+    .refine((value) => (SUB_CITIES as readonly string[]).includes(value), "Choose your sub-city."),
   address: z.string().trim().min(6, "Enter a more complete delivery address."),
   deliveryNote: z.string().trim().max(240, "Keep the note under 240 characters."),
 });
 
-type CheckoutDetails = z.infer<typeof checkoutSchema>;
+type OrderDetails = z.infer<typeof orderSchema>;
 
-function friendlyOrderError(message?: string): string {
-  if (message && /stock|unavailable/i.test(message)) {
-    return "Some items in your cart are no longer available in that size or quantity. Please update your cart.";
-  }
-  return "We could not place your order. Please try again.";
-}
+const inputClass =
+  "min-h-12 w-full rounded-full border border-border bg-surface px-4 text-sm text-ink outline-none placeholder:text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent";
+const textareaClass =
+  "w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent";
 
 export function CheckoutPage() {
-  const [step, setStep] = useState<"shipping" | "review">("shipping");
-  const [shippingDetails, setShippingDetails] = useState<CheckoutDetails | null>(null);
+  const [step, setStep] = useState<"details" | "review">("details");
+  const [details, setDetails] = useState<OrderDetails | null>(null);
+  const [isPlacing, setIsPlacing] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const navigate = useNavigate();
   const items = useCartStore((state) => state.items);
-  const user = useAuthStore((state) => state.user);
   const isRestoring = useCartStore((state) => state.isRestoring);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const user = useAuthStore((state) => state.user);
   const authLoading = useAuthStore((state) => state.isLoading);
-  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
-  const [isPaying, setIsPaying] = useState(false);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const subtotal = items.reduce(
-    (total, item) => total + item.product.price * item.quantity,
-    0,
-  );
+  const subtotal = items.reduce((total, item) => total + item.product.price * item.quantity, 0);
   const {
     formState: { errors },
     handleSubmit,
     register,
-  } = useForm<CheckoutDetails>({
-    resolver: zodResolver(checkoutSchema),
-    defaultValues: {
-      fullName: "",
-      phone: "",
-      city: "Addis Ababa",
-      address: "",
-      deliveryNote: "",
-    },
+  } = useForm<OrderDetails>({
+    resolver: zodResolver(orderSchema),
+    defaultValues: { fullName: "", phone: "", subCity: "", address: "", deliveryNote: "" },
   });
 
-  function reviewOrder(details: CheckoutDetails) {
-    setShippingDetails(details);
+  function reviewOrder(values: OrderDetails) {
+    setDetails(values);
     setStep("review");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function startPayment() {
-    if (!shippingDetails) return;
-    setIsPaying(true);
-    setPaymentError(null);
+  async function handlePlaceOrder() {
+    if (!details || isPlacing) return;
+    setIsPlacing(true);
+    setOrderError(null);
 
     try {
-      // Reuse the order if payment failed to start last time, so stock is not reserved twice.
-      let orderId = pendingOrderId;
-      if (!orderId) {
-        const { data, error } = await supabase.rpc("place_order", {
-          p_items: items.map((item) => ({
-            product_id: item.product.id,
-            color_id: item.color?.id ?? null,
-            size: item.size,
-            quantity: item.quantity,
-          })),
-          p_shipping: {
-            full_name: shippingDetails.fullName,
-            phone: shippingDetails.phone,
-            city: shippingDetails.city,
-            address: shippingDetails.address,
-            delivery_note: shippingDetails.deliveryNote,
-          },
-        });
-        if (error || typeof data !== "string") {
-          throw new Error(friendlyOrderError(error?.message));
-        }
-        orderId = data;
-        setPendingOrderId(orderId);
-      }
-
-      const { data: payment, error: paymentStartError } = await supabase.functions.invoke<{
-        checkoutUrl?: string;
-      }>("initialize-chapa-payment", { body: { orderId } });
-      if (paymentStartError || !payment?.checkoutUrl) {
-        throw new Error("Your order is saved, but we could not start the payment. Please try again.");
-      }
-
-      toast.info("Order placed", "Taking you to Chapa to pay…");
-      window.location.assign(payment.checkoutUrl);
+      const orderId = await placeOrder(items, details);
+      clearCart();
+      toast.success("Order placed", "We will call you soon to confirm it.");
+      navigate(`/orders/${orderId}`, { state: { justPlaced: true }, replace: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Something went wrong. Please try again.";
-      setPaymentError(message);
-      toast.error("Couldn't start your payment", message);
-      setIsPaying(false);
+      setOrderError(message);
+      toast.error("Couldn't place your order", message);
+      setIsPlacing(false);
     }
   }
 
@@ -128,7 +91,7 @@ export function CheckoutPage() {
     return (
       <section className="mx-auto max-w-content px-4 py-20 text-center sm:px-6 lg:px-10">
         <h1 className="text-3xl font-extrabold tracking-tightest text-ink">Your cart is empty</h1>
-        <p className="mt-3 text-sm text-muted">Add something from the collection before checking out.</p>
+        <p className="mt-3 text-sm text-muted">Add something from the collection before placing an order.</p>
         <Link
           className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
           to="/#shop"
@@ -147,8 +110,8 @@ export function CheckoutPage() {
   if (!user) {
     return (
       <section className="mx-auto max-w-content px-4 py-20 text-center sm:px-6 lg:px-10">
-        <h1 className="text-3xl font-extrabold tracking-tightest text-ink">Sign in to check out</h1>
-        <p className="mt-3 text-sm text-muted">Your cart is saved. Sign in or create an account to place your order.</p>
+        <h1 className="text-3xl font-extrabold tracking-tightest text-ink">Sign in to place your order</h1>
+        <p className="mt-3 text-sm text-muted">Your cart is saved. Sign in or create an account to order.</p>
         <Link
           className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
           to="/login?redirect=/checkout"
@@ -172,12 +135,12 @@ export function CheckoutPage() {
       <div className="mt-5 border-b border-border pb-6 sm:flex sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Shik wearables</p>
-          <h1 className="mt-2 text-4xl font-extrabold tracking-tightest text-ink">Checkout</h1>
+          <h1 className="mt-2 text-4xl font-extrabold tracking-tightest text-ink">Place your order</h1>
         </div>
-        <ol aria-label="Checkout progress" className="mt-5 flex items-center gap-3 text-sm sm:mt-0">
-          <li aria-current={step === "shipping" ? "step" : undefined} className={step === "shipping" ? "font-semibold text-ink" : "text-muted"}>
+        <ol aria-label="Order progress" className="mt-5 flex items-center gap-3 text-sm sm:mt-0">
+          <li aria-current={step === "details" ? "step" : undefined} className={step === "details" ? "font-semibold text-ink" : "text-muted"}>
             <span className="mr-2 inline-flex size-7 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-ink">1</span>
-            Shipping
+            Delivery
           </li>
           <li aria-hidden="true" className="h-px w-6 bg-border" />
           <li aria-current={step === "review" ? "step" : undefined} className={step === "review" ? "font-semibold text-ink" : "text-muted"}>
@@ -188,37 +151,54 @@ export function CheckoutPage() {
       </div>
 
       <div className="grid gap-10 pt-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-16">
-        <section aria-labelledby="checkout-step-heading">
-          {step === "shipping" ? (
+        <section aria-labelledby="order-step-heading">
+          {step === "details" ? (
             <form className="space-y-7" noValidate onSubmit={handleSubmit(reviewOrder)}>
               <div>
-                <h2 className="text-xl font-bold tracking-tight text-ink" id="checkout-step-heading">Shipping details</h2>
-                <p className="mt-2 text-sm leading-6 text-muted">We’ll use these details to confirm delivery options and fees with you.</p>
+                <h2 className="text-xl font-bold tracking-tight text-ink" id="order-step-heading">Delivery details</h2>
+                <p className="mt-2 text-sm leading-6 text-muted">We deliver in Addis Ababa only, and delivery is free. We will call you to confirm your order.</p>
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field autoComplete="name" error={errors.fullName?.message} label="Full name" name="fullName" placeholder="Your name" register={register} />
-                <Field autoComplete="tel" error={errors.phone?.message} hint="Use 09…, 07…, or +251…" label="Phone number" name="phone" placeholder="09 11 22 33 44" register={register} type="tel" />
-                <Field autoComplete="address-level2" error={errors.city?.message} label="City or area" name="city" placeholder="Addis Ababa" register={register} />
+                <Field autoComplete="tel" error={errors.phone?.message} hint="We will call this number. Use 09…, 07…, or +251…" label="Phone number" name="phone" placeholder="09 11 22 33 44" register={register} type="tel" />
+
+                <div className="sm:col-span-2">
+                  <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="subCity">Sub-city</label>
+                  <select
+                    aria-describedby={errors.subCity ? "subCity-error" : undefined}
+                    aria-invalid={Boolean(errors.subCity)}
+                    autoComplete="address-level3"
+                    className={inputClass}
+                    id="subCity"
+                    {...register("subCity")}
+                  >
+                    <option value="">Choose your sub-city</option>
+                    {SUB_CITIES.map((subCity) => <option key={subCity}>{subCity}</option>)}
+                  </select>
+                  {errors.subCity?.message && <p className="mt-1.5 text-sm text-danger" id="subCity-error">{errors.subCity.message}</p>}
+                </div>
+
                 <div className="sm:col-span-2">
                   <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="address">Delivery address</label>
                   <textarea
                     aria-describedby={errors.address ? "address-error" : undefined}
                     aria-invalid={Boolean(errors.address)}
                     autoComplete="street-address"
-                    className="min-h-28 w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                    className={`${textareaClass} min-h-28`}
                     id="address"
-                    placeholder="Street, building, neighborhood, and helpful directions"
+                    placeholder="Neighborhood, street, building, house number, and a nearby landmark"
                     {...register("address")}
                   />
                   {errors.address?.message && <p className="mt-1.5 text-sm text-danger" id="address-error">{errors.address.message}</p>}
                 </div>
+
                 <div className="sm:col-span-2">
                   <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="deliveryNote">Delivery note <span className="font-normal text-muted">(optional)</span></label>
                   <textarea
                     aria-describedby={errors.deliveryNote ? "delivery-note-error" : undefined}
                     aria-invalid={Boolean(errors.deliveryNote)}
-                    className="min-h-20 w-full resize-y rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                    className={`${textareaClass} min-h-20`}
                     id="deliveryNote"
                     placeholder="Anything that will help us find you?"
                     {...register("deliveryNote")}
@@ -235,51 +215,53 @@ export function CheckoutPage() {
             <div>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold tracking-tight text-ink" id="checkout-step-heading">Review your details</h2>
-                  <p className="mt-2 text-sm text-muted">Check your contact and delivery information.</p>
+                  <h2 className="text-xl font-bold tracking-tight text-ink" id="order-step-heading">Review your order</h2>
+                  <p className="mt-2 text-sm text-muted">Check your contact and delivery details.</p>
                 </div>
-                <button className="text-sm font-semibold text-accent underline decoration-transparent underline-offset-4 hover:decoration-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" onClick={() => setStep("shipping")} type="button">
+                <button className="text-sm font-semibold text-accent underline decoration-transparent underline-offset-4 hover:decoration-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" disabled={isPlacing} onClick={() => setStep("details")} type="button">
                   Edit details
                 </button>
               </div>
 
-              {shippingDetails && (
+              {details && (
                 <dl className="mt-6 divide-y divide-border rounded-2xl border border-border bg-surface px-5">
                   <div className="py-4">
                     <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Contact</dt>
-                    <dd className="mt-2 text-sm font-medium text-ink">{shippingDetails.fullName}</dd>
-                    <dd className="mt-1 text-sm text-muted">{shippingDetails.phone}</dd>
+                    <dd className="mt-2 text-sm font-medium text-ink">{details.fullName}</dd>
+                    <dd className="mt-1 text-sm text-muted">{details.phone}</dd>
                   </div>
                   <div className="py-4">
                     <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Delivery address</dt>
                     <dd className="mt-2 flex gap-2 text-sm leading-6 text-ink">
                       <MapPin aria-hidden="true" className="mt-1 shrink-0 text-muted" size={16} />
-                      <span>{shippingDetails.address}, {shippingDetails.city}</span>
+                      <span>{details.address}, {details.subCity}, Addis Ababa</span>
                     </dd>
-                    {shippingDetails.deliveryNote && <dd className="mt-2 text-sm text-muted">Note: {shippingDetails.deliveryNote}</dd>}
+                    {details.deliveryNote && <dd className="mt-2 text-sm text-muted">Note: {details.deliveryNote}</dd>}
                   </div>
                 </dl>
               )}
 
               <div className="mt-6 rounded-2xl border border-border bg-surface p-5">
                 <div className="flex gap-3">
-                  <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0 text-muted" size={19} />
+                  <Banknote aria-hidden="true" className="mt-0.5 shrink-0 text-muted" size={19} />
                   <div>
-                    <h3 className="text-sm font-semibold text-ink">Pay securely with Chapa</h3>
-                    <p className="mt-1 text-sm leading-6 text-muted">Your items are held for 30 minutes while you pay. Delivery fees are not included in this payment and will be confirmed with you.</p>
+                    <h3 className="text-sm font-semibold text-ink">Pay in cash on delivery</h3>
+                    <p className="mt-1 text-sm leading-6 text-muted">
+                      You pay {formatPrice(subtotal)} in cash when your order arrives. Delivery is free. Your items are reserved for you while we confirm your order by phone.
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {paymentError && <p className="mt-4 text-sm text-danger" role="alert">{paymentError}</p>}
+              {orderError && <p className="mt-4 text-sm text-danger" role="alert">{orderError}</p>}
 
               <button
                 className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 text-sm font-semibold text-accent-ink transition-colors hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:bg-border disabled:text-muted sm:w-auto"
-                disabled={isPaying}
-                onClick={() => void startPayment()}
+                disabled={isPlacing}
+                onClick={() => void handlePlaceOrder()}
                 type="button"
               >
-                {isPaying ? "Starting payment…" : "Continue to payment"} <ArrowRight aria-hidden="true" size={17} />
+                {isPlacing ? "Placing your order…" : "Place order"} <ArrowRight aria-hidden="true" size={17} />
               </button>
             </div>
           )}
@@ -305,11 +287,14 @@ export function CheckoutPage() {
               <dd className="font-semibold text-ink">{formatPrice(subtotal)}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-muted">Delivery</dt>
-              <dd className="text-right text-muted">Confirmed before payment</dd>
+              <dt className="text-muted">Delivery in Addis Ababa</dt>
+              <dd className="font-semibold text-ink">Free</dd>
+            </div>
+            <div className="flex justify-between gap-4 border-t border-border pt-3">
+              <dt className="font-semibold text-ink">Pay on delivery</dt>
+              <dd className="font-bold text-ink">{formatPrice(subtotal)}</dd>
             </div>
           </dl>
-          <p className="mt-4 text-xs leading-5 text-muted">Delivery coverage and fees depend on your address and are not included in this subtotal.</p>
         </aside>
       </div>
     </div>
@@ -321,9 +306,9 @@ interface FieldProps {
   error?: string;
   hint?: string;
   label: string;
-  name: "fullName" | "phone" | "city";
+  name: "fullName" | "phone";
   placeholder: string;
-  register: UseFormRegister<CheckoutDetails>;
+  register: UseFormRegister<OrderDetails>;
   type?: string;
 }
 
@@ -337,7 +322,7 @@ function Field({ autoComplete, error, hint, label, name, placeholder, register, 
         aria-describedby={error ? errorId : undefined}
         aria-invalid={Boolean(error)}
         autoComplete={autoComplete}
-        className="min-h-12 w-full rounded-full border border-border bg-surface px-4 text-sm text-ink outline-none placeholder:text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+        className={inputClass}
         id={name}
         placeholder={placeholder}
         type={type}
@@ -347,4 +332,4 @@ function Field({ autoComplete, error, hint, label, name, placeholder, register, 
       {error && <p className="mt-1.5 text-sm text-danger" id={errorId}>{error}</p>}
     </div>
   );
-}
+}

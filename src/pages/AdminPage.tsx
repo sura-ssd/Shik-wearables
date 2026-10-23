@@ -10,6 +10,7 @@ import {
   updateStock,
   type AdminProduct,
 } from "../lib/adminProducts";
+import { AdminNav } from "../components/AdminNav";
 import { useAuthStore } from "../store/authStore";
 import { useProductStore } from "../store/productStore";
 import { toast } from "../store/toastStore";
@@ -88,7 +89,8 @@ function AdminDashboard() {
   return (
     <div className="mx-auto max-w-content px-4 pb-16 pt-8 sm:px-6 lg:px-10">
       <h1 className="text-4xl font-extrabold tracking-tightest text-ink">Admin</h1>
-      <p className="mt-2 text-sm text-muted">Post products, set stock, and hide items from the shop.</p>
+      <p className="mb-6 mt-2 text-sm text-muted">Post products, set stock, and hide items from the shop.</p>
+      <AdminNav />
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,460px)_minmax(0,1fr)]">
         <NewProductForm onCreated={handleChanged} />

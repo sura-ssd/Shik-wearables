@@ -33,8 +33,14 @@ const AdminPage = lazy(() =>
 const LoginPage = lazy(() =>
   import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })),
 );
-const OrderCompletePage = lazy(() =>
-  import("./pages/OrderCompletePage").then((module) => ({ default: module.OrderCompletePage })),
+const OrdersPage = lazy(() =>
+  import("./pages/OrdersPage").then((module) => ({ default: module.OrdersPage })),
+);
+const OrderDetailPage = lazy(() =>
+  import("./pages/OrderDetailPage").then((module) => ({ default: module.OrderDetailPage })),
+);
+const AdminOrdersPage = lazy(() =>
+  import("./pages/AdminOrdersPage").then((module) => ({ default: module.AdminOrdersPage })),
 );
 
 export default function App() {
@@ -208,7 +214,9 @@ export default function App() {
               <Route element={<CheckoutPage />} path="/checkout" />
               <Route element={<LoginPage />} path="/login" />
               <Route element={<AdminPage />} path="/admin" />
-              <Route element={<OrderCompletePage />} path="/order-complete" />
+              <Route element={<AdminOrdersPage />} path="/admin/orders" />
+              <Route element={<OrdersPage />} path="/orders" />
+              <Route element={<OrderDetailPage />} path="/orders/:id" />
               <Route element={<Navigate replace to="/" />} path="*" />
             </Routes>
           </div>

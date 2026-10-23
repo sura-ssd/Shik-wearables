@@ -1,7 +1,9 @@
-import { LogOut, Moon, ShoppingCart, Sun, User } from "lucide-react";
+import { LogOut, Moon, Package, ShoppingCart, Sun, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import { usePendingOrderAlerts } from "../hooks/usePendingOrderAlerts";
 import { useAuthStore } from "../store/authStore";
 import { useCartStore } from "../store/cartStore";
+import { usePendingOrdersStore } from "../store/pendingOrdersStore";
 
 interface HeaderProps {
   isDark: boolean;
@@ -12,6 +14,9 @@ export function Header({ isDark, onThemeToggle }: HeaderProps) {
   const user = useAuthStore((state) => state.user);
   const role = useAuthStore((state) => state.role);
   const signOut = useAuthStore((state) => state.signOut);
+  const pendingOrders = usePendingOrdersStore((state) => state.count);
+  // Admins are told about new orders while they browse the site.
+  usePendingOrderAlerts(role === "admin");
   const openCart = useCartStore((state) => state.openCart);
   const itemCount = useCartStore((state) =>
     state.items.reduce((total, item) => total + item.quantity, 0),
@@ -66,10 +71,25 @@ export function Header({ isDark, onThemeToggle }: HeaderProps) {
         <div className="flex items-center gap-2">
           {role === "admin" && (
             <Link
-              className="inline-flex min-h-10 items-center rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-              to="/admin"
+              className="inline-flex min-h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+              to="/admin/orders"
             >
               Admin
+              {pendingOrders > 0 && (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold leading-5 text-accent-ink">
+                  {pendingOrders}
+                  <span className="sr-only"> orders waiting for confirmation</span>
+                </span>
+              )}
+            </Link>
+          )}
+          {user && (
+            <Link
+              aria-label="My orders"
+              className="inline-flex size-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              to="/orders"
+            >
+              <Package aria-hidden="true" size={19} />
             </Link>
           )}
           {user ? (
