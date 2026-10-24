@@ -106,11 +106,11 @@ function OrdersDashboard() {
       <p className="mb-6 mt-2 text-sm text-muted">Phone each customer to confirm, then send the order out and collect the cash.</p>
       <AdminNav />
 
-      <div aria-label="Order status" className="mb-6 flex flex-wrap gap-2" role="tablist">
+      <div aria-label="Order status" className="-mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0" role="tablist">
         {TABS.map((item) => (
           <button
             aria-selected={item.id === tab.id}
-            className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+            className={`inline-flex min-h-10 shrink-0 items-center whitespace-nowrap rounded-full border px-4 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
               item.id === tab.id ? "border-accent bg-accent/10 text-accent" : "border-border text-muted hover:text-ink"
             }`}
             key={item.id}
@@ -158,7 +158,7 @@ function OrderCard({ order, onChanged }: { order: Order; onChanged: () => Promis
   }
 
   const reasons = panel === "failed" ? FAILED_REASONS : CANCEL_REASONS;
-  const closedReason = describeReason(order.status, order.cancellation_reason);
+  const closedReason = describeReason(order.status, order.cancellation_reason, "admin");
 
   return (
     <li className="min-w-0 rounded-2xl border border-border bg-surface p-5">
@@ -195,9 +195,6 @@ function OrderCard({ order, onChanged }: { order: Order; onChanged: () => Promis
       </p>
 
       {closedReason && <p className="mt-3 text-sm text-muted">{closedReason}</p>}
-      {(order.status === "cancelled" || order.status === "delivery_failed") && order.cancellation_reason && !closedReason && (
-        <p className="mt-3 text-sm text-muted">Reason: {order.cancellation_reason}</p>
-      )}
 
       {panel ? (
         <div className="mt-4 rounded-xl border border-border bg-canvas p-4">

@@ -8,7 +8,7 @@ import { useAuthStore } from "../store/authStore";
 import { toast } from "../store/toastStore";
 import { formatDateTime } from "../utils/formatDate";
 import { formatPrice } from "../utils/formatPrice";
-import { STATUS_LABELS, STATUS_SUMMARY, TIMELINE, describeReason, isOpenStatus } from "../utils/orderStatus";
+import { STATUS_LABELS, STATUS_SUMMARY, TIMELINE, closureNotice, isOpenStatus } from "../utils/orderStatus";
 
 const smallButton =
   "inline-flex min-h-10 items-center justify-center rounded-full border border-border px-5 text-sm font-semibold text-ink hover:border-accent hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:text-muted";
@@ -79,7 +79,7 @@ export function OrderDetailPage() {
     );
   }
 
-  const reason = describeReason(order.status, order.cancellation_reason);
+  const closure = closureNotice(order.status, order.cancellation_reason);
   const stepTimes = [order.created_at, order.confirmed_at, order.dispatched_at, order.delivered_at];
   const currentStep = TIMELINE.indexOf(order.status);
 
@@ -93,7 +93,8 @@ export function OrderDetailPage() {
         All orders
       </Link>
 
-      {justPlaced && (
+      {/* The "we will call you" message only makes sense while the order is waiting for confirmation. */}
+      {justPlaced && order.status === "pending" && (
         <div className="mt-5 rounded-2xl border border-accent/40 bg-accent/10 p-5" role="status">
           <p className="flex items-center gap-2 text-base font-bold text-ink">
             <Check aria-hidden="true" className="text-accent" size={18} /> Thank you, your order is placed
@@ -101,6 +102,19 @@ export function OrderDetailPage() {
           <p className="mt-2 text-sm leading-6 text-muted">
             We will call you on {order.phone} to confirm it. Please keep your phone close.
           </p>
+        </div>
+      )}
+
+      {closure && (
+        <div className="mt-5 rounded-2xl border border-border bg-surface p-5" role="status">
+          <p className="text-base font-bold text-ink">{closure.title}</p>
+          <p className="mt-2 text-sm leading-6 text-muted">{closure.body}</p>
+          <Link
+            className="mt-4 inline-flex min-h-10 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-accent-ink hover:bg-ink hover:text-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            to="/#shop"
+          >
+            Continue shopping
+          </Link>
         </div>
       )}
 
@@ -114,9 +128,7 @@ export function OrderDetailPage() {
         {currentStep === -1 ? (
           <div>
             <p className="text-base font-semibold text-ink">{STATUS_LABELS[order.status]}</p>
-            <p className="mt-1 text-sm text-muted">{STATUS_SUMMARY[order.status]}</p>
-            {reason && <p className="mt-1 text-sm text-muted">{reason}</p>}
-            {order.cancelled_at && <p className="mt-2 text-xs text-muted">{formatDateTime(order.cancelled_at)}</p>}
+            {order.cancelled_at && <p className="mt-1 text-xs text-muted">{formatDateTime(order.cancelled_at)}</p>}
           </div>
         ) : (
           <>

@@ -1,6 +1,7 @@
 import { LogOut, Moon, Package, ShoppingCart, Sun, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePendingOrderAlerts } from "../hooks/usePendingOrderAlerts";
+import { MobileMenu } from "./MobileMenu";
 import { useAuthStore } from "../store/authStore";
 import { useCartStore } from "../store/cartStore";
 import { usePendingOrdersStore } from "../store/pendingOrdersStore";
@@ -37,7 +38,7 @@ export function Header({ isDark, onThemeToggle }: HeaderProps) {
         </Link>
         <nav
           aria-label="Main navigation"
-          className="hidden items-center gap-8 text-sm font-semibold text-muted sm:flex"
+          className="hidden items-center gap-6 text-sm font-semibold text-muted md:flex lg:gap-8"
         >
           <Link
             className="transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
@@ -68,7 +69,9 @@ export function Header({ isDark, onThemeToggle }: HeaderProps) {
             Clothing
           </Link>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* On tablets and larger the actions sit in the header. On phones they move into the menu. */}
+          <div className="hidden items-center gap-2 md:flex">
           {role === "admin" && (
             <Link
               className="inline-flex min-h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
@@ -122,6 +125,7 @@ export function Header({ isDark, onThemeToggle }: HeaderProps) {
               <Moon aria-hidden="true" size={19} />
             )}
           </button>
+          </div>
           <button
             aria-label={`Open cart, ${itemCount} ${itemCount === 1 ? "item" : "items"}`}
             className="relative inline-flex size-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
@@ -138,6 +142,17 @@ export function Header({ isDark, onThemeToggle }: HeaderProps) {
               {itemCount}
             </span>
           </button>
+          <div className="md:hidden">
+            <MobileMenu
+              email={user?.email}
+              isAdmin={role === "admin"}
+              isDark={isDark}
+              isSignedIn={Boolean(user)}
+              onSignOut={() => void signOut()}
+              onThemeToggle={onThemeToggle}
+              pendingOrders={pendingOrders}
+            />
+          </div>
         </div>
       </div>
     </header>
