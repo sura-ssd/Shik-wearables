@@ -3,7 +3,7 @@ import { compareSizes } from "./products";
 import { supabase } from "./supabase";
 import type { ProductCategory } from "../types";
 
-const IMAGE_BUCKET = "product-images";
+export const IMAGE_BUCKET = "product-images";
 // Largest photo someone may choose. It is shrunk before upload.
 export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 // Photos allowed for each color.
@@ -121,7 +121,7 @@ export async function fetchAdminProducts(): Promise<AdminProduct[]> {
   }));
 }
 
-async function uploadPhoto(file: File, folder: string): Promise<{ path: string; url: string }> {
+export async function uploadPhoto(file: File, folder: string): Promise<{ path: string; url: string }> {
   const optimized = await optimizeImage(file);
   if (optimized.size > MAX_UPLOAD_BYTES) {
     throw new Error("A photo is still too large after compressing. Please choose a smaller one.");
@@ -234,7 +234,7 @@ export async function updateStock(variantId: string, stock: number): Promise<voi
 }
 
 /** Works out where a photo lives in storage from its public address. Photos from elsewhere return null. */
-function storagePathFromUrl(url: string): string | null {
+export function storagePathFromUrl(url: string): string | null {
   const marker = `/${IMAGE_BUCKET}/`;
   const index = url.indexOf(marker);
   return url.includes("/storage/v1/object/") && index !== -1 ? decodeURIComponent(url.slice(index + marker.length)) : null;

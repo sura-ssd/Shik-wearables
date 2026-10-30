@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Plus, X } from "lucide-react";
 import {
   MAX_IMAGE_BYTES,
@@ -479,6 +479,9 @@ function AdminProductRow({ product, onChanged }: { product: AdminProduct; onChan
           <p className="text-sm font-semibold text-ink">{product.name}</p>
           <p className="mt-1 text-xs text-muted">{product.category} · {formatPrice(product.priceEtb)} · {product.active ? "Visible in shop" : "Hidden"}</p>
           <div className="mt-3 flex flex-wrap gap-2">
+            <Link className={smallButton} to={`/admin/products/${product.id}`}>
+              Edit
+            </Link>
             <button className={smallButton} disabled={busy} onClick={() => void run(() => setProductActive(product.id, !product.active), product.active ? "Hidden from the shop." : "Visible in the shop.")} type="button">
               {product.active ? "Hide from shop" : "Show in shop"}
             </button>

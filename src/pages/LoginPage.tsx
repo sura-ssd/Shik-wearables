@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Check, Eye, EyeOff, X } from "lucide-react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { PasswordStrengthMeter } from "../components/PasswordStrengthMeter";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
 import { toast } from "../store/toastStore";
@@ -8,9 +9,6 @@ import { checkPassword } from "../utils/passwordStrength";
 
 const inputClass =
   "min-h-12 w-full rounded-full border border-border bg-surface px-4 text-sm text-ink outline-none placeholder:text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent";
-
-// Bar color for each strength score (0 to 4).
-const METER_COLORS = ["bg-border", "bg-danger", "bg-muted", "bg-accent", "bg-accent"];
 
 function safeRedirect(value: string | null): string {
   // Only allow paths inside this site.
@@ -137,41 +135,18 @@ export function LoginPage() {
             </button>
           </div>
 
-          {isSignup && (
-            <div className="mt-3" id="password-help">
-              <div aria-hidden="true" className="flex gap-1">
-                {[1, 2, 3, 4].map((level) => (
-                  <span
-                    className={`h-1.5 flex-1 rounded-full transition-colors ${
-                      password && strength.score >= level ? METER_COLORS[strength.score] : "bg-border"
-                    }`}
-                    key={level}
-                  />
-                ))}
-              </div>
-              <p aria-live="polite" className="mt-2 text-xs font-semibold text-ink">
-                {password ? `Password strength: ${strength.label}` : "Choose a strong password"}
-              </p>
-              <ul className="mt-2 space-y-1">
-                {strength.checks.map((check) => (
-                  <li
-                    className={`flex items-center gap-2 text-xs ${check.passed ? "text-ink" : "text-muted"}`}
-                    key={check.id}
-                  >
-                    {check.passed ? (
-                      <Check aria-hidden="true" className="shrink-0 text-accent" size={14} />
-                    ) : (
-                      <X aria-hidden="true" className="shrink-0" size={14} />
-                    )}
-                    <span>
-                      {check.label}
-                      <span className="sr-only">{check.passed ? " (done)" : " (not met yet)"}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+          {!isSignup && (
+            <div className="mt-2 text-right">
+              <Link
+                className="text-sm font-semibold text-accent underline decoration-transparent underline-offset-4 hover:decoration-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                to="/forgot-password"
+              >
+                Forgot password?
+              </Link>
             </div>
           )}
+
+          {isSignup && <PasswordStrengthMeter id="password-help" password={password} result={strength} />}
         </div>
 
         {isSignup && (

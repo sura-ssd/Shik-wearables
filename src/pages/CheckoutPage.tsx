@@ -273,6 +273,15 @@ export function CheckoutPage() {
               >
                 {isPlacing ? "Placing your order…" : "Place order"} <ArrowRight aria-hidden="true" size={17} />
               </button>
+              <p className="mt-4 text-xs leading-5 text-muted">
+                By placing an order you agree to our{" "}
+                <Link className="font-semibold text-accent underline underline-offset-2" to="/policies/terms">terms</Link>{" "}
+                and our{" "}
+                <Link className="font-semibold text-accent underline underline-offset-2" to="/policies/delivery">delivery and payment</Link>{" "}
+                and{" "}
+                <Link className="font-semibold text-accent underline underline-offset-2" to="/policies/returns">returns</Link>{" "}
+                policies.
+              </p>
             </div>
           )}
         </section>

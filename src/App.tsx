@@ -13,10 +13,12 @@ import { Skeleton } from "./components/Skeleton";
 import { Toaster } from "./components/Toaster";
 import { TopLoader } from "./components/TopLoader";
 import { buildHeroSlides } from "./data/heroSlides";
+import { POLICY_LIST } from "./data/policies";
+import { SHOP } from "./data/shopInfo";
 import { useProducts } from "./hooks/useProducts";
 import { startCartSync } from "./lib/cartSync";
 import { useInitialLoad } from "./hooks/useInitialLoad";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 // import { ScrollManager } from "./components/ScrollManager";
 import { useAuthStore } from "./store/authStore";
 
@@ -32,6 +34,18 @@ const AdminPage = lazy(() =>
 );
 const LoginPage = lazy(() =>
   import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })),
+);
+const AdminProductEditPage = lazy(() =>
+  import("./pages/AdminProductEditPage").then((module) => ({ default: module.AdminProductEditPage })),
+);
+const ForgotPasswordPage = lazy(() =>
+  import("./pages/ForgotPasswordPage").then((module) => ({ default: module.ForgotPasswordPage })),
+);
+const ResetPasswordPage = lazy(() =>
+  import("./pages/ResetPasswordPage").then((module) => ({ default: module.ResetPasswordPage })),
+);
+const PolicyPage = lazy(() =>
+  import("./pages/PolicyPage").then((module) => ({ default: module.PolicyPage })),
 );
 const OrdersPage = lazy(() =>
   import("./pages/OrdersPage").then((module) => ({ default: module.OrdersPage })),
@@ -215,6 +229,10 @@ export default function App() {
               <Route element={<LoginPage />} path="/login" />
               <Route element={<AdminPage />} path="/admin" />
               <Route element={<AdminOrdersPage />} path="/admin/orders" />
+              <Route element={<AdminProductEditPage />} path="/admin/products/:id" />
+              <Route element={<ForgotPasswordPage />} path="/forgot-password" />
+              <Route element={<ResetPasswordPage />} path="/reset-password" />
+              <Route element={<PolicyPage />} path="/policies/:slug" />
               <Route element={<OrdersPage />} path="/orders" />
               <Route element={<OrderDetailPage />} path="/orders/:id" />
               <Route element={<Navigate replace to="/" />} path="*" />
@@ -238,8 +256,12 @@ export default function App() {
               Contact
             </p>
             <ul className="mt-3 space-y-2">
-              <li>hello@shikshop.com</li>
-              <li>+251 91 234 5678</li>
+              <li>
+                <a className="hover:text-ink hover:underline" href={`mailto:${SHOP.email}`}>{SHOP.email}</a>
+              </li>
+              <li>
+                <a className="hover:text-ink hover:underline" href={`tel:${SHOP.phone.replace(/\s/g, "")}`}>{SHOP.phone}</a>
+              </li>
             </ul>
           </div>
           <div>
@@ -247,9 +269,16 @@ export default function App() {
               Support
             </p>
             <ul className="mt-3 space-y-2">
-              <li>Shipping</li>
-              <li>Returns</li>
-              <li>Care guide</li>
+              {POLICY_LIST.map((policy) => (
+                <li key={policy.slug}>
+                  <Link
+                    className="hover:text-ink hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                    to={`/policies/${policy.slug}`}
+                  >
+                    {policy.title}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
